@@ -1,12 +1,11 @@
 import cors from 'cors';
 import csrf from 'csurf';
 import helmet from 'helmet';
-import config from 'config';
+import config from '../configs';
 import cookieParser from 'cookie-parser';
 import * as Sentry from '@sentry/node';
-import express, { Application, Request, Response } from 'express';
+import express, { Application } from 'express';
 import mainRouter from '../routes/index';
-import { fail } from 'assert';
 
 const appInit = async (app: Application): Promise<void> => {
   // Set up sentry for production error logging
