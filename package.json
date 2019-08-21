@@ -26,9 +26,8 @@
     "express": "^4.17.1",
     "helmet": "^3.20.0",
     "pg": "^7.12.1",
-    "pg-hstore": "^2.3.3",
-    "sequelize": "^5.15.0",
-    "sequelize-cli": "^5.5.0"
+    "reflect-metadata": "^0.1.13",
+    "typeorm": "^0.2.18"
   },
   "devDependencies": {
     "@types/config": "0.0.34",

@@ -26,14 +26,15 @@ const config = {
   /**
    * Database connection url config
    */
-  databaseUrl: {
-    url: (env: String): String => {
-      if (env !== 'production') {
-        const { DB_PASSWORD, DB_HOST, DB_NAME, DB_NAME_TEST} = process.env
-          const dbName = env === 'test' ? DB_NAME : DB_NAME_TEST;
-          return `postgres://postgres${DB_PASSWORD}@${DB_HOST}/5432/${dbName}`
+  database: {
+    url: (): String => {
+      const {NODE_ENV, PROD_DATABASE_URL } = process.env;
+      if (NODE_ENV !== 'production') {
+        const { DB_PASSWORD, DB_HOST, DB_NAME, DB_NAME_TEST } = process.env;
+        const dbName = NODE_ENV !== 'test' ? DB_NAME : DB_NAME_TEST;
+        return `postgres://postgres:${DB_PASSWORD}@${DB_HOST}:5432/${dbName}`;
       } else {
-        return ''
+        return `${PROD_DATABASE_URL}`
       }
     }
   }
