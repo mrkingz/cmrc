@@ -1,19 +1,21 @@
-import config from 'config'
+ import config from '../configs';
 import { createConnection, Connection } from 'typeorm';
 
-const getDatabaseURL: Function = config.get('database.url');
 
 /**
  * @description Connect database
  * 
- * @param {boolean} useSSL indicates if the connection should use SSL
+ * @param {boolean} isProduction indicates if the connection should use SSL
  * @returns Promise<Connection>
  */
-const dbConnection: Function = async (useSSL: boolean): Promise<Connection> => {
+const dbConnection: Function = async (): Promise<Connection> => {
+  const getDatabaseURL: Function = config.get('database.url');
+  const getSSLStatus = config.get('database.ssl');
+
   return createConnection({
     type: 'postgres',
     logging: true,
-    ssl: useSSL,
+    ssl: getSSLStatus(),
     url: getDatabaseURL()
   })
 };
