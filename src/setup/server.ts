@@ -1,10 +1,9 @@
-import config from 'config';
+import config from '../configs';
 import express, { Application } from 'express';
 import appInit from './app';
 import databaseConnection from './database';
-const app: Application = express();
 
-const PORT = config.get('app.port');
+const app: Application = express();
 
 
 (async () => {
@@ -13,12 +12,14 @@ const PORT = config.get('app.port');
    * that may occure during database connection
    */
   await appInit(app);
-  await databaseConnection(process.env.NODE_ENV === 'production'); 
-
-    // We can start our app now
-    await app.listen(PORT, (): void => {
-      console.log(`Server running on PORT ${PORT} in ${app.get('env')} mode`);
-    });
+  await databaseConnection(); 
+  
+  const PORT = config.get('app.port') || 3000;
+  
+  // We can start our app now
+  await app.listen(PORT, (): void => {
+    console.log(`Server running on PORT ${PORT} in ${app.get('env')} mode`);
+  });
 })(); 
 
 export default app;

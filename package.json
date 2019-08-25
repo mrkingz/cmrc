@@ -2,22 +2,22 @@
   "name": "cmrc",
   "version": "1.0.0",
   "description": "",
-  "main": "app.js",
+  "main": "dist/setup/server.js",
   "engines": {
     "node": "11.6.0"
   },
   "scripts": {
     "start": "node dist/setup/server.js",
-    "start-dev": "ts-node ./src/setup/server.ts",
-    "build-dev": "tsc && npm run start",
-    "dev": "nodemon -e ts -w ./src -x npm run start-dev",
+    "start-dev": "nodemon",
+    "build": "rm -rf dist && tsc",
+    "build-dev": "npm run build && npm run start",
+    "heroku-postbuild": "npm run build",
     "test": "exit 0"
   },
   "author": "Kingsley Frank-Demesi",
   "license": "ISC",
   "dependencies": {
     "@sentry/node": "^5.6.1",
-    "@types/dotenv": "^6.1.1",
     "config": "^3.2.2",
     "cookie-parser": "^1.4.4",
     "cors": "^2.8.5",
@@ -27,13 +27,16 @@
     "helmet": "^3.20.0",
     "pg": "^7.12.1",
     "reflect-metadata": "^0.1.13",
-    "typeorm": "^0.2.18"
+    "ts-node": "^8.3.0",
+    "typeorm": "^0.2.18",
+    "typescript": "^3.5.3"
   },
   "devDependencies": {
     "@types/config": "0.0.34",
     "@types/cookie-parser": "^1.4.1",
     "@types/cors": "^2.8.5",
     "@types/csurf": "^1.9.35",
+    "@types/dotenv": "^6.1.1",
     "@types/express": "^4.17.0",
     "@types/helmet": "0.0.43",
     "@types/node": "^12.7.1",
@@ -46,9 +49,7 @@
     "husky": "^3.0.3",
     "lint-staged": "^9.2.1",
     "nodemon": "^1.19.1",
-    "prettier": "^1.18.2",
-    "ts-node": "^8.3.0",
-    "typescript": "^3.5.3"
+    "prettier": "^1.18.2"
   },
   "husky": {
     "hooks": {
