@@ -5,7 +5,6 @@ import databaseConnection from './database';
 
 const app: Application = express();
 
-
 (async () => {
   /**
    * Make sure app initialization comes first so sentry can log any error 
