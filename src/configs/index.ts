@@ -43,14 +43,24 @@ const config = {
        * @returns that database connection url
        */
       url: (): string => {
-        const { NODE_ENV } = process.env;
-        if (NODE_ENV !== 'production') {
-          const { DB_PASSWORD, DB_HOST, DB_NAME, TEST_DB_NAME, DB_USERNAME } = process.env;
-          const dbName = NODE_ENV !== 'test' ? DB_NAME : TEST_DB_NAME;
+        switch (process.env.NODE_ENV) {
+          case 'production':
+            return `${process.env.DATABASE_URL}`;
+          /**
+           * If app is running on a test mode,
+           * create a test database url from the test env variables
+           */
+          case 'test':
+            const { TEST_DB_USERNAME, TEST_DB_PASSWORD, TEST_DB_HOST, TEST_DB_NAME } = process.env;
+            return `postgres://${TEST_DB_USERNAME}:${TEST_DB_PASSWORD}@${TEST_DB_HOST}:5432/${TEST_DB_NAME}`;
 
-          return `postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:5432/${dbName}`;
-        } else {
-          return `${process.env.DATABASE_URL}`;
+          /**
+           * If app is not running running on a test/production mode
+           * default to development mode,  and create a corresponding database url
+           */ 
+          default: 
+            const { DB_USERNAME, DB_PASSWORD, DB_HOST, DB_NAME } = process.env;
+            return `postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}`;
         }
       }
     },
