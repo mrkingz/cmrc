@@ -46,21 +46,22 @@ const config = {
         switch (process.env.NODE_ENV) {
           case 'production':
             return `${process.env.DATABASE_URL}`;
-          /**
-           * If app is running on a test mode,
-           * create a test database url from the test env variables
-           */
-          case 'test':
-            const { TEST_DB_USERNAME, TEST_DB_PASSWORD, TEST_DB_HOST, TEST_DB_NAME } = process.env;
-            return `postgres://${TEST_DB_USERNAME}:${TEST_DB_PASSWORD}@${TEST_DB_HOST}:5432/${TEST_DB_NAME}`;
 
-          /**
-           * If app is not running running on a test/production mode
-           * default to development mode,  and create a corresponding database url
-           */ 
-          default: 
-            const { DB_USERNAME, DB_PASSWORD, DB_HOST, DB_NAME } = process.env;
-            return `postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}`;
+          default:
+            let databaseURL = 'postgres://'
+            const {
+              DB_USERNAME, DB_PASSWORD, DB_HOST, DB_NAME,
+              TEST_DB_USERNAME, TEST_DB_PASSWORD, TEST_DB_HOST, TEST_DB_NAME
+            } = process.env;
+            
+            /**
+             * Check if app is running on test mode; otherwise, default to development configs
+             */
+            databaseURL += process.env.NODE_ENV === 'test'
+              ? `${TEST_DB_USERNAME}:${TEST_DB_PASSWORD}@${TEST_DB_HOST}:5432/${TEST_DB_NAME}`
+              : `${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}`;
+
+            return databaseURL;
         }
       }
     },
@@ -72,14 +73,14 @@ const config = {
    * @param {Array} keys array of the top level configuration keys
    * @param {Object} configs object containing the configuration
    */
-  deep (keys: Array<string>, configs: any): any {
+  deep(keys: Array<string>, configs: any): any {
     const key = keys[keys.length - 1];
     for (let config in configs) {
-      if (configs[config][key]) 
+      if (configs[config][key])
         return configs[config][key];
     }
   },
-  
+
   /**
    * @description Gets a value from a single key/nested keys
    *
