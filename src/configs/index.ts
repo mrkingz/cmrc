@@ -31,13 +31,6 @@ const config = {
      */
     database: {
       /**
-       * @description Gets the ssl connection status
-       * 
-       * @returns boolean
-       */
-      ssl: (): boolean => process.env.NODE_ENV === 'production',
-
-      /**
        * @description Gets the database connection url
        * 
        * @returns that database connection url

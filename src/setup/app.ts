@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import * as Sentry from '@sentry/node';
 import express, { Application } from 'express';
 import mainRouter from '../routes/index';
+import { Request, Response, NextFunction } from 'express';
 
 const appInit = async (app: Application): Promise<void> => {
   // Set up sentry for production error logging
@@ -25,6 +26,10 @@ const appInit = async (app: Application): Promise<void> => {
 
   // The error handler must be before any other error middleware and after all controllers
   app.use(Sentry.Handlers.errorHandler());
+
+  app.use('*', (error: any, req: Request, res: Response) => {
+    res.status(error.status).json({ error })
+  })
 }
 
 export default appInit;

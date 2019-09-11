@@ -11,7 +11,7 @@ const app: Application = express();
    * that may occure during database connection
    */
   await appInit(app);
-  await databaseConnection(); 
+  await databaseConnection(app.get('env')); 
   
   const PORT = config.get('app.port') || 3000;
   
