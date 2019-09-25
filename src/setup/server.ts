@@ -1,11 +1,11 @@
-import config from '../configs';
+import configs from '../configs';
 import express, { Application } from 'express';
 import appInit from './app';
 import databaseConnection from './database';
 
 const app: Application = express();
 
-(async () => {
+(async (): Promise<void> => {
   /**
    * Make sure app initialization comes first so sentry can log any error 
    * that may occure during database connection
@@ -13,7 +13,7 @@ const app: Application = express();
   await appInit(app);
   await databaseConnection(app.get('env')); 
   
-  const PORT = config.get('app.port') || 3000;
+  const PORT = configs.app.port || 3000;
   
   // We can start our app now
   await app.listen(PORT, (): void => {

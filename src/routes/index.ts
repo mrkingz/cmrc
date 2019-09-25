@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import authRoutes from './authRoutes';
-import config from '../configs';
+import configs from '../configs';
 import sanitizeFields from '../middlewares/sanitizeFields';
 
 const mainRouter = Router();
@@ -8,7 +8,7 @@ const mainRouter = Router();
 mainRouter.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
-    message: `Welcome to ${config.get('app.name')}`
+    message: `Welcome to ${configs.app.name} API`
   });
 });
 

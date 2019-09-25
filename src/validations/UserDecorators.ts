@@ -7,6 +7,8 @@ import {
   ValidatorConstraintInterface
 } from "class-validator";
 
+
+
 @ValidatorConstraint({ async: true })
 class EmailConstraint implements ValidatorConstraintInterface {
   async validate (email: string, args: ValidationArguments): Promise<boolean> {

@@ -1,4 +1,4 @@
-export default interface ResponseOptionsInterface<T> {
+export default interface HTTPResponseOptionsInterface<T> {
   keep?: boolean;
   message?: string;
   status?: number;

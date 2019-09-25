@@ -8,12 +8,13 @@ import { Request, Response, NextFunction } from 'express';
 const sanitizeFields: Function = (): Function => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (req.body) {
-      Object.keys(req.body).forEach((key: any) => {
+      Object.keys(req.body).forEach((key: string) => {
         if (req.body[key].constructor === String) {
           req.body[key] = req.body[key].trim();
         }
       });
     }
+    
     next();
   }
 };
