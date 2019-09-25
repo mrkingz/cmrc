@@ -1,6 +1,6 @@
 import path from 'path';
 import { createConnection, Connection } from 'typeorm';
-import config from '../configs';
+import configs from '../configs';
 
 
 /**
@@ -10,11 +10,11 @@ import config from '../configs';
  * @returns Promise<Connection>
  */
 const dbConnection: Function = async (env: string): Promise<Connection> => {
-  const getDatabaseURL: Function = config.get('database.url');
+  const getDatabaseURL: Function = configs.database.url;
 
   return await createConnection({
     type: 'postgres',
-    logging: false,
+    logging: true,
     synchronize: env !== 'production',
     ssl: env === 'production',
     url: getDatabaseURL(),

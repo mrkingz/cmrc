@@ -3,13 +3,14 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/0b3250ee633a008cdacc/maintainability)](https://codeclimate.com/github/mrkingz/cmrc/maintainability)
 
 # Communication and Media Research Center (CMRC)
-CMRC is a web application that provides an online platform for clients to contact professionals or seasoned personnels for a research in the field of Communication, Media, Advertising, marketing, Public relations and humanities.
+CMRC is a web application that provides an online platform for clients to contact professionals or experts for a research in the field of Communication, Media, Advertising, marketing, Public Relations and Humanities.
 
 ## Backend Technology Stack
 * NodeJS
 * TypeScript
 * Express
 * PostgreSQL
+* TypeORM
 
 ## Getting Started
 * Install **NodeJs** and **PostgreSQL** (PGAdmin 4 preferably) locally on your machine or signup to an online hosted database e.g ElephantSql
