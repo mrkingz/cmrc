@@ -2,11 +2,15 @@ import { NextFunction } from 'connect';
 import { Request, Response } from 'express';
 
 import configs from '../configs';
-import LangService from '../services/utilities/LangService';
-import HTTPResponseOptions from '../interfaces/HTTPResponseOptionsInterface';
+import constants from '../constants';
+import UtilityService from '../services/utilities/UtilityService';
+import HTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
 import RespositoryService from '../services/repositories/RepositoryService';
+import isEmpty from 'lodash.isempty';
+import IHTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
 
-export default abstract class AbstractController<T>  extends LangService {
+const { http } = constants;
+export default abstract class AbstractController<T>  extends UtilityService {
 
   /**
    * @description the base URL of the application
@@ -24,7 +28,11 @@ export default abstract class AbstractController<T>  extends LangService {
    * @type {number}
    * @memberof AbstractController
    */
-  protected readonly CREATED: number = 200;
+  protected readonly CREATED: number = http.CREATED;
+
+  protected readonly OKAY: number = http.OKAY
+
+  protected readonly BAD_REQUEST: number = http.BAD_REQUEST;
 
   /**
    * @description Status code for an unauthorized operation
@@ -33,7 +41,7 @@ export default abstract class AbstractController<T>  extends LangService {
    * @type {number}
    * @memberof AbstractController
    */
-  protected readonly UNAUTHORIZED: number = 401;
+  protected readonly UNAUTHORIZED: number = http.UNAUTHORIZED;
 
   constructor() {
     super();
@@ -93,10 +101,10 @@ export default abstract class AbstractController<T>  extends LangService {
    * @returns {object}
    * @memberof AbstractController
    */
-  protected getResponseData (data: object, message: string, status: number = 200): object {
-    return { 
-      status, message, data: this.mapDataToEntityName(data)
-    };
+  protected getResponseData (data: object, message: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
+    return isEmpty(data) 
+      ? { status, message }
+      : { status, message, data: this.mapDataToEntityName(data) as Object } as IHTTPResponseOptions<T>;
   }
 
   /**
@@ -140,9 +148,9 @@ export default abstract class AbstractController<T>  extends LangService {
 
     //Todo: Do something with keep
 
-    status = status || 200;
+    status = status || this.OKAY;
     res.status(status).json({
-      success: success || status < 400,
+      success: success || status < this.BAD_REQUEST,
       message,
       ...data
     });

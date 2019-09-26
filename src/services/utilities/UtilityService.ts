@@ -1,6 +1,16 @@
+import lang from '../../lang';
 import CustomError from '../../validations/CustomError';
-
 export default class UtilityService {
+
+  /**
+   * @description The application's language object
+   *
+   * @protected
+   * @type {object}
+   * @memberof LangService
+   */
+  protected lang: object = lang;
+
   /**
    * @description Capitalizes the first character of a string
    *
@@ -43,6 +53,23 @@ export default class UtilityService {
       return value;
     }
     throw this.rejectionError(`${key} is not a valid key`);
+  }
+
+  /**
+   * @description Gets a property's value from the language object
+   *
+   * @protected
+   * @param {string} key the error key
+   * @param {string} target the targetted language
+   * @returns {string}
+   * @memberof UtilityService
+   */
+  protected getLang (key: string, target: string = ''): string | object {
+    const lang = this.deep(key, this.lang as {});
+    
+    return lang.constructor === String
+      ? (lang as string).replace(':value', target)
+      : lang as object;
   }
 
   /**

@@ -1,6 +1,7 @@
 import { Timestamp } from "typeorm";
+import { ValidatorOptions } from "class-validator";
 
-export default interface UserInterface {
+export interface IUser {
   id?: string;
   firstName?: string;
   lastName?: string;
@@ -13,3 +14,13 @@ export default interface UserInterface {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
+
+
+export interface UpdateOptions {
+  message?: string;
+  skip?: Array<string>;
+}
+
+export interface IValidatorOptions extends ValidatorOptions {
+  skip?: Array<string>
+}
