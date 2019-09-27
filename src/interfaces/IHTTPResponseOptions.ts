@@ -1,7 +1,7 @@
-export default interface HTTPResponseOptionsInterface<T> {
+export default interface IHTTPResponseOptions<T> {
   keep?: boolean;
   message?: string;
   status?: number;
   success?: boolean;
-  data: T
+  data?: T
 }

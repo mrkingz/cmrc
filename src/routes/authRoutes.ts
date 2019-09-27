@@ -23,5 +23,8 @@ authRoutes.post('/signup',  userController.signUp());
  */
 authRoutes.get('/verification/:token',  userController.accountVerification());
 
-
+/**
+ * Send a password reset email
+ */
+authRoutes.post('/passwordReset', userController.sendPasswordResetLink())
 export default authRoutes

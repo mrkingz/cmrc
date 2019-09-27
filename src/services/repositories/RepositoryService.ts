@@ -1,10 +1,12 @@
 import isEmpty from 'lodash.isempty';
-import { getRepository, FindOneOptions } from 'typeorm';
-import { validate, ValidationError, ValidatorOptions } from 'class-validator';
+import { getRepository, FindOneOptions, FindConditions } from 'typeorm';
+import { validate, ValidationError } from 'class-validator';
 
-import UtilityService from '../utilities/UtitlityService';
+import constants from '../../constants';
+import UtilityService from '../utilities/UtilityService';
+import { UpdateOptions, IValidatorOptions } from '../../interfaces/IEntity';
 
-
+const { http } = constants;
 export default class RespositoryService<T> extends UtilityService {
 
   /**
@@ -12,7 +14,7 @@ export default class RespositoryService<T> extends UtilityService {
    *
    * @protected
    * @type {string}
-   * @memberof EntityService
+   * @memberof RespositoryService<T>
    */
   private entityName: string;
 
@@ -52,7 +54,7 @@ export default class RespositoryService<T> extends UtilityService {
 
     const { ...data } = await this.getRepository().findOne(options) as T;
     if (isEmpty(data)) {
-      throw this.rejectionError(message, 404);
+      throw this.rejectionError(message, http.NOT_FOUND);
     }
     return data;
   }
@@ -61,7 +63,7 @@ export default class RespositoryService<T> extends UtilityService {
    * @description Gets the name of the entity
    * 
    * @returns {string} the name of the enitity
-   * @memberof EntityService
+   * @memberof RespositoryService<T>
    */
   public getEntityName(): string {
     return this.entityName;
@@ -82,20 +84,30 @@ export default class RespositoryService<T> extends UtilityService {
    * @description Updates an entity
    *
    * @protected
-   * @param {*} entity
    * @param {object} values
-   * @param {string} [message] optional message to send
+   * @param {string} [options] options
+   * - options.message (optional) message to send if enitiy to update does not exist
+   * - options.skip array of fields not to validate
+   * @param {function} [callback] optional callback function before updating
    * @returns
    * @memberof BaseController
    */
-  public async update (entity: {[key: string]: string}, values: T, message?: string) {
+  public async update (condition: FindConditions<T>, values: T, options: UpdateOptions = {},  callback?: Function): Promise<T> {
+    const message = options.message || this.getLang('error.invalid', this.getEntityName()) as string
+    const entity: { [key: string]: string } = await this.findOneOrFail(condition, message as string) as {};
 
-    await this.validator(this.getRepository().create(values) as T);
-    
-    await this.getRepository().save({ id: entity.id }, values);
-    const updates = this.getRepository().merge(entity, values) as T;
+    if (typeof callback === 'function') {
+      callback(entity);
+    }
+    await this.validator(this.getRepository().create(values) as T, { skip: options.skip });
+    await this.getRepository().update({ id: entity.id }, values);
+    const updates: T = this.getRepository().merge(entity, values) as T;
 
     return updates;
+  }
+
+  public createProps (fields: T) {
+    return this.getRepository().create(fields)
   }
 
   /**
@@ -103,24 +115,31 @@ export default class RespositoryService<T> extends UtilityService {
    * 
    * @param {T} entity the database entity
    * @param {ValidatorOptions} [options] validation options
+   * - options.skip array of fields not to validate
    * @returns {Object} the validation response
    */
-  protected async validator (entity: T, options?: ValidatorOptions): Promise<T> {
-
-    const error = await validate(entity, { 
-      ...options,
+  public async validator (entity: T, options: IValidatorOptions = {}): Promise<T> {
+    const { skip, ...extraOptions } = options
+    let error = await validate(entity, { 
       whitelist: true, 
       forbidNonWhitelisted: true,
-      skipMissingProperties: false
+      skipMissingProperties: true,
+      ...extraOptions
     });
 
     if (error.length > 0) {
+      let sk = skip || []
       const errors: { [key: string]: string } = {};
       error.forEach((error: ValidationError) => {
-        errors[error.property] = Object.values(error.constraints)[0] as string;
+        // check for skipped fields
+        if (!sk.includes(error.property)) {
+          errors[error.property] = Object.values(error.constraints)[0] as string;
+        }
       });
-      
-      throw this.rejectionError(errors, 400);
+
+      if (!isEmpty(errors)) {
+        throw this.rejectionError(errors, http.BAD_REQUEST);
+      }
     }
 
     return entity;

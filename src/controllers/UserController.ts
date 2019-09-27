@@ -1,14 +1,14 @@
 import jwt from 'jsonwebtoken';
 import sendGrid from '@sendgrid/mail';
-import { FindOneOptions } from 'typeorm';
 import { Request, Response } from 'express';
 
 import configs from '../configs'
 import AbstractController from './AbstractController';
-import UserInterface from '../interfaces/UserInterface';
+import { IUser } from '../interfaces/IEntity';
 import NotificationService from '../services/notifications/NotificationService';
-import { EmailLangsInterface } from '../interfaces/EmailNotificationInterface';
+import { IEmailLangs, IMailOptions } from '../interfaces/INotification';
 import RespositoryService from '../services/repositories/RepositoryService';
+import IHTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
 
 sendGrid.setApiKey(configs.app.sendGridKey as string)
 
@@ -17,7 +17,8 @@ type Decoded = {
   isAdmin: boolean,
   exp: number,
 }
-class UserController extends AbstractController<UserInterface> {
+class UserController extends AbstractController<IUser> {
+  [x: string]: any;
   /**
    * @description 
    *
@@ -26,6 +27,7 @@ class UserController extends AbstractController<UserInterface> {
    */
   public readonly VERIFICATION: string = 'verification';
 
+  public readonly PASSWORD: string = 'password';
   /**
    * @description Instane of NotificationService to send notification
    *
@@ -39,19 +41,19 @@ class UserController extends AbstractController<UserInterface> {
    * @description Instance of RepositoryService to interface with the database
    *
    * @private
-   * @type {RespositoryService<UserInterface>}
+   * @type {RespositoryService<IUser>}
    * @memberof UserController
    */
-  private repository: RespositoryService<UserInterface>;
+  private repository: RespositoryService<IUser>;
 
   /**
    * @description Creates an instance of UserController.
    * 
    * @param {NotificationService} notifier the notification service instance
-   * @param {RespositoryService<UserInterface>} repository the repository service instane
+   * @param {RespositoryService<IUser>} repository the repository service instane
    * @memberof UserController
    */
-  constructor(notifier: NotificationService, repository: RespositoryService<UserInterface>) {
+  constructor(notifier: NotificationService, repository: RespositoryService<IUser>) {
     super();
     this.notifier = notifier;
     this.repository = repository;
@@ -60,8 +62,50 @@ class UserController extends AbstractController<UserInterface> {
   /**
    * @override method getRespositoryService in RespositoryService
    */
-  protected getRespositoryService(): RespositoryService<UserInterface> {
+  protected getRespositoryService(): RespositoryService<IUser> {
     return this.repository;
+  }
+
+  /**
+   * @description Sends a password reset email 
+   *
+   * @returns {Function} an async function which accepts an express middleware function 
+   * as a callback to handle the POST request
+   * @memberof UserController
+   */
+  public sendPasswordResetLink () {
+    return this.asyncFunction(async (req: Request, res: Response): Promise<object> => {
+      this.setBaseURL(req);
+
+      const { email } = req.body;
+      await this.getRespositoryService().validator(
+        this.getRespositoryService().createProps({ email }) as IUser,
+        // We don't to validate these fields, but the email only
+        { skip: ['firstName', 'lastName', 'password'] });
+
+      const user: IUser = await this.getRespositoryService().findOneOrFail(
+        { email: req.body.email } as object, 
+        this.getLang('error.notFound', this.getRespositoryService().getEntityName()) as string);
+  
+      this.sendEmailNotification(user, this.PASSWORD);
+      
+      return this.getResponseData(
+        this.removePasswordFromUserData(user), 
+        this.getLang('email.password.message') as string);
+    });
+  }
+
+  /**
+   * @description A convinient function to protect user password
+   *
+   * @private
+   * @param {IUser} user
+   * @returns {IHTTPResponseOptions<IUser>}
+   * @memberof UserController
+   */
+  private removePasswordFromUserData (user: IUser): IHTTPResponseOptions<IUser> {
+    const { password, ...otherDetails } = user
+    return otherDetails as object;
   }
 
   /**
@@ -70,18 +114,16 @@ class UserController extends AbstractController<UserInterface> {
    * @returns {Function} an async function which accepts an express middleware function 
    * as a callback to handle the POST request
    */
-  public signUp() {
+  public signUp () {
     return this.asyncFunction(async (req: Request, res: Response): Promise<object> => {
       this.setBaseURL(req);
 
-      const user = await this.getRespositoryService().create({
-         ...req.body, isVerified: false 
-      }) as any;
+      const user: IUser = await this.getRespositoryService().create(req.body);
       this.sendEmailNotification(user, this.VERIFICATION);
 
       return this.getResponseData(
-        user, this.getLang(`email.${this.VERIFICATION}.message`) as string, this.CREATED
-      );
+        this.removePasswordFromUserData(user), 
+        this.getLang(`email.${this.VERIFICATION}.message`) as string, this.CREATED);
     });
   }
 
@@ -98,31 +140,38 @@ class UserController extends AbstractController<UserInterface> {
         req.params.token, this.getLang('error.expired', this.capitalizeFirst(text)) as string, text
       );
 
-      const user: UserInterface = await this.getRespositoryService().findOneOrFail(
-        { id: decoded.id } as FindOneOptions<UserInterface>,
-        this.getLang('error.invalid', this.VERIFICATION) as string
+      const updatedUser = await this.getRespositoryService().update(
+        { id: decoded.id }, 
+        { isVerified: true }, 
+        { 
+          message: this.getLang('error.invalid', this.VERIFICATION) as string,
+          skip: ['firstName', 'lastName', 'email', 'password', 'isVerified']
+        },
+        /*
+         * A callback function to check if email has been verified previously
+         */
+        (user: IUser) => {
+          if (user.isVerified) {
+            throw this.rejectionError(
+              this.getLang('error.verified', this.capitalizeFirst(text)), this.UNAUTHORIZED
+            );
+          }
+        }
       );
 
-      if (user.isVerified) {
-        throw this.rejectionError(
-          this.getLang('error.verified', this.capitalizeFirst(text)), this.UNAUTHORIZED
-        );
-      }
-
-      const updatedUser = await this.getRespositoryService().update(user as {}, { isVerified: true });
-      const { password, ...otherDetails } = updatedUser as any;
-
-       return this.getResponseData(otherDetails, this.getLang('email.verified') as string );
+      return this.getResponseData(
+        this.removePasswordFromUserData(updatedUser), 
+        this.getLang('email.verified') as string);
     });
   }
 
   /**
    * @description Sends email notification 
    * 
-   * @param {UserInterface} user the receiver
+   * @param {IUser} user the receiver
    * @param {String} emailType the type of email notification
    */
-  public sendEmailNotification(user: UserInterface, emailType: string): void {
+  public sendEmailNotification(user: IUser, emailType: string): void {
 
     this.getNotifier().sendEmail(
       user.email as string,  this.getMailBody(user, emailType)
@@ -133,16 +182,16 @@ class UserController extends AbstractController<UserInterface> {
    * @description Generates mail options for verification email
    *
    * @protected
-   * @param {UserInterface} user
+   * @param {IUser} user
    * @param {string} emailType the type of email
    * @returns
    * @memberof UserController
    */
-  protected getMailBody(user: UserInterface, emailType: string): object {
+  protected getMailBody(user: IUser, emailType: string): IMailOptions {
 
     const { 
       intro, subject, outro, instructions, text 
-    } = this.getLang(`email.${emailType}`) as EmailLangsInterface
+    } = this.getLang(`email.${emailType}`) as IEmailLangs
 
     return {
       subject,
@@ -190,12 +239,12 @@ class UserController extends AbstractController<UserInterface> {
    * @description Generates links for email notifications 
    *
    * @private
-   * @param {UserInterface} user the user
+   * @param {IUser} user the user
    * @param {string} emailType
    * @returns
    * @memberof NotificationService
    */
-  private generateLink (user: UserInterface, emailType: string): string {
+  private generateLink (user: IUser, emailType: string): string {
     const token = this.generateJWT({ id: user.id as string }, { expiresIn: '3d' });
     return `${this.getBaseURL()}/auth/${emailType}/${token}`;
   }
@@ -243,4 +292,4 @@ class UserController extends AbstractController<UserInterface> {
   }
 }
 
-export default new UserController(new NotificationService(), new RespositoryService<UserInterface>('User'));
+export default new UserController(new NotificationService(), new RespositoryService<IUser>('User'));
