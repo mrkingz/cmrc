@@ -65,7 +65,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @returns {Promise<Function>} an asynchronous function
    * @memberof BaseController
    */
-  protected asyncFunction (callback: Function) {
+  protected tryCatch (callback: Function) {
     return async (req: Request, res: Response, next: NextFunction): Promise<any> => {
       try {
 
@@ -104,7 +104,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
   protected getResponseData (data: object, message: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
     return isEmpty(data) 
       ? { status, message }
-      : { status, message, data: this.mapDataToEntityName(data) as Object } as IHTTPResponseOptions<T>;
+      : { status, message, data: this.mapDataToEntityName(data) } as object;
   }
 
   /**
@@ -113,9 +113,10 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @param {Object | Array<any>} data 
    * @returns object
    */
-  private mapDataToEntityName (data: Object | Array<any>): object {
+  private mapDataToEntityName (data: object | Array<any>): object {
     let key = this.getRespositoryService().getEntityName().toLowerCase();
-    const response: { [key: string]: any } = new Object();
+    const { token, ...otherDetails } = data as any;
+    const response: { [key: string]: any } = {};
 
      /**
       * Check if data is an array
@@ -131,8 +132,8 @@ export default abstract class AbstractController<T>  extends UtilityService {
         : `${key}s`;
     }
     
-    response[key] = data;
-    return response;
+    response[key] = otherDetails;
+    return { ...response, token };
   }
 
   /**

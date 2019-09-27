@@ -50,10 +50,11 @@ export default class RespositoryService<T> extends UtilityService {
    * @returns
    * @memberof BaseController
    */
-  public async findOneOrFail (options: FindOneOptions<T>, message: string): Promise<T> {
+  public async findOneOrFail (options: FindOneOptions<T>, message?: string): Promise<T> {
 
     const { ...data } = await this.getRepository().findOne(options) as T;
     if (isEmpty(data)) {
+      message = message || this.getLang('error.notFound') as string;
       throw this.rejectionError(message, http.NOT_FOUND);
     }
     return data;

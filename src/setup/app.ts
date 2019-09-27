@@ -30,7 +30,7 @@ const appInit = async (app: Application): Promise<void> => {
   app.use('*', (req: Request, res: Response) => {
     res.status(404).json({ 
       success: false,
-      error: 'Not found' 
+      error: 'Route not found' 
     })
   })
 }

@@ -1,5 +1,7 @@
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import sendGrid from '@sendgrid/mail';
+import { FindOneOptions } from 'typeorm';
 import { Request, Response } from 'express';
 
 import configs from '../configs'
@@ -18,16 +20,33 @@ type Decoded = {
   exp: number,
 }
 class UserController extends AbstractController<IUser> {
-  [x: string]: any;
+
   /**
-   * @description 
+   * @description Identifies a verification notification languages, token type
    *
    * @type {string}
    * @memberof UserController
    */
-  public readonly VERIFICATION: string = 'verification';
+  private readonly VERIFICATION: string = 'verification';
 
-  public readonly PASSWORD: string = 'password';
+  /**
+   * @description Identifies a password reset link notification languages, token type
+   *
+   * @private
+   * @type {string}
+   * @memberof UserController
+   */
+  private readonly PASSWORD: string = 'password';
+
+  /**
+   * @description Identifies authentication languages
+   *
+   * @private
+   * @type {string}
+   * @memberof UserController
+   */
+  private readonly AUTHENTICATION: string = 'authentication';
+
   /**
    * @description Instane of NotificationService to send notification
    *
@@ -74,7 +93,7 @@ class UserController extends AbstractController<IUser> {
    * @memberof UserController
    */
   public sendPasswordResetLink () {
-    return this.asyncFunction(async (req: Request, res: Response): Promise<object> => {
+    return this.tryCatch(async (req: Request, res: Response): Promise<object> => {
       this.setBaseURL(req);
 
       const { email } = req.body;
@@ -91,7 +110,7 @@ class UserController extends AbstractController<IUser> {
       
       return this.getResponseData(
         this.removePasswordFromUserData(user), 
-        this.getLang('email.password.message') as string);
+        this.getLang(`email.${this.PASSWORD}.message`) as string);
     });
   }
 
@@ -115,15 +134,45 @@ class UserController extends AbstractController<IUser> {
    * as a callback to handle the POST request
    */
   public signUp () {
-    return this.asyncFunction(async (req: Request, res: Response): Promise<object> => {
+    return this.tryCatch(async (req: Request, res: Response): Promise<object> => {
       this.setBaseURL(req);
 
-      const user: IUser = await this.getRespositoryService().create(req.body);
+      const user: IUser = await this.getRespositoryService().create({
+        ...req.body,
+        password: this.hashPassword(req.body.password)
+      });
       this.sendEmailNotification(user, this.VERIFICATION);
 
       return this.getResponseData(
         this.removePasswordFromUserData(user), 
         this.getLang(`email.${this.VERIFICATION}.message`) as string, this.CREATED);
+    });
+  }
+
+  /**
+   * @description Sign in a registered user
+   *
+   * @returns {Function} an async function which accepts an express middleware function 
+   * as a callback to handle the POST request
+   * @memberof UserController
+   */
+  public signIn () {
+    return this.tryCatch(async (req: Request, res: Response) => {
+      const { email, password } = req.body;
+
+      const user: IUser = await this.getRespositoryService().findOneOrFail(
+          { email } as FindOneOptions<IUser>,
+          this.getLang(`${this.AUTHENTICATION}.${(email ? 'invalid' : 'required')}`) as string
+        );
+        
+        if (this.confirmPassword(password, user.password as string)) {
+          const token: string = this.generateJWT({ id: user.id, isAdmin: user.isAdmin })
+
+          return this.getResponseData( 
+            { ...this.removePasswordFromUserData(user), token },
+            this.getLang(`${this.AUTHENTICATION}.success`) as string);
+        }
+        return this.rejectionError(`${this.AUTHENTICATION}.inavlid`);
     });
   }
 
@@ -134,7 +183,7 @@ class UserController extends AbstractController<IUser> {
    * @memberof UserController
    */
   public accountVerification () {
-    return this.asyncFunction(async (req: Request, res: Response): Promise<any> => {
+    return this.tryCatch(async (req: Request, res: Response): Promise<any> => {
       const text = this.VERIFICATION;
       const decoded = this.validateToken(
         req.params.token, this.getLang('error.expired', this.capitalizeFirst(text)) as string, text
@@ -220,7 +269,7 @@ class UserController extends AbstractController<IUser> {
    * @returns {string}
    * @memberof UserController
    */
-  private generateJWT (payload: object, configOptions: object): string {
+  private generateJWT (payload: object, configOptions?: object): string {
     return jwt.sign(payload, configs.app.jwtSecret as string, configOptions);
   }
 
@@ -289,6 +338,18 @@ class UserController extends AbstractController<IUser> {
       throw this.rejectionError(message, this.UNAUTHORIZED)
     }
     return decoded;
+  }
+
+  private hashPassword (password: string): string {
+    return bcrypt.hashSync(password, bcrypt.genSaltSync(10));
+  }
+
+  private confirmPassword (password: string, oldPassword: string): boolean {
+    try {
+      return bcrypt.compareSync(password, oldPassword);
+    } catch (error) {
+      throw this.rejectionError(this.getLang(`${this.AUTHENTICATION}.required`), this.UNAUTHORIZED);
+    }
   }
 }
 
