@@ -29,6 +29,12 @@ export default {
     notFound: `:value not found`,
     server: `Internal error occured, try again later!`
   },
+  
+  authentication: {
+    invalid: 'Invalid email and password',
+    required: 'Email and password are required',
+    success: 'User authentication successfull'
+  },
 
   entity: {
     created: `:value successfully created`,
