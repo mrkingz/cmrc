@@ -9,11 +9,14 @@ const configs = {
   app: {
     name: 'CMRC',
     domain: '#',
-    jwtSecret: process.env.JWT_SECRET,
     port: process.env.PORT || 3000,
     sentry: process.env.SENTRY,
     sendGridKey: process.env.SENDGRID_API_KEY,
-    fromEmail: process.env.FROM_EMAIL
+    fromEmail: process.env.FROM_EMAIL,
+    jwt: {
+      issuer: process.env.ISSUER,
+      secret: process.env.JWT_SECRET
+    }
   },
 
   /**

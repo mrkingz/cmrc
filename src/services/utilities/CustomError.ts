@@ -1,4 +1,4 @@
-export default class ValidationError extends Error {
+export default class CustomError extends Error {
   public error: string | object;
   public status: number;
 

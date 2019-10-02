@@ -5,11 +5,11 @@ import configs from '../configs';
 import constants from '../constants';
 import UtilityService from '../services/utilities/UtilityService';
 import HTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
-import RespositoryService from '../services/repositories/RepositoryService';
+import RespositoryService from '../services/repositories/AbstractRepository';
 import isEmpty from 'lodash.isempty';
 import IHTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
 
-const { http } = constants;
+const { status } = constants;
 export default abstract class AbstractController<T>  extends UtilityService {
 
   /**
@@ -22,26 +22,49 @@ export default abstract class AbstractController<T>  extends UtilityService {
   protected baseURL!: string;
 
   /**
-   * @description Status for a newly created resource
+   * @description Status code for a newly created resource
    *
    * @protected
    * @type {number}
    * @memberof AbstractController
    */
-  protected readonly CREATED: number = http.CREATED;
-
-  protected readonly OKAY: number = http.OKAY
-
-  protected readonly BAD_REQUEST: number = http.BAD_REQUEST;
+  protected readonly CREATED: number = status.CREATED;
 
   /**
-   * @description Status code for an unauthorized operation
+   * @description Status code for a successfull request
    *
    * @protected
    * @type {number}
    * @memberof AbstractController
    */
-  protected readonly UNAUTHORIZED: number = http.UNAUTHORIZED;
+  protected readonly OKAY: number = status.OKAY
+
+  /**
+   * @description Status code for bad request
+   *
+   * @protected
+   * @type {number}
+   * @memberof AbstractController
+   */
+  protected readonly BAD_REQUEST: number = status.BAD_REQUEST;
+
+  /**
+   * @description Status code for a conflicting request
+   *
+   * @protected
+   * @type {number}
+   * @memberof AbstractController
+   */
+  protected readonly CONFLICT: number = status.CONFLICT;
+
+  /**
+   * @description Status code for an unauthorized request
+   *
+   * @protected
+   * @type {number}
+   * @memberof AbstractController
+   */
+  protected readonly UNAUTHORIZED: number = status.UNAUTHORIZED;
 
   constructor() {
     super();
@@ -55,7 +78,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @returns {RespositoryService<T>}
    * @memberof AbstractController
    */
-  protected abstract getRespositoryService (): RespositoryService<T>;
+  protected abstract getRespository (): RespositoryService<T>;
 
   /**
    * @description Runs a callback function asynchronously
@@ -78,14 +101,14 @@ export default abstract class AbstractController<T>  extends UtilityService {
          */ 
         return (response.constructor === Function)
           ? response()
-          : this.httpResponse(req, res, response);
+          : this.statusResponse(req, res, response);
 
       } catch (error) {
         return res.status(error.status || 500).json({ 
           success: false,
           error: req.app.settings.env === 'development' 
             ? error.toString()
-            : this.getLang('error.server') as string
+            : this.getMessage('error.server')
         });
       }
     }
@@ -114,7 +137,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @returns object
    */
   private mapDataToEntityName (data: object | Array<any>): object {
-    let key = this.getRespositoryService().getEntityName().toLowerCase();
+    let key = this.getRespository().getEntityName().toLowerCase();
     const { token, ...otherDetails } = data as any;
     const response: { [key: string]: any } = {};
 
@@ -144,7 +167,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @param {ResponseOptions<T>} options 
    * @returns void
    */
-  protected httpResponse (req: Request, res: Response, options: HTTPResponseOptions<T>): void {
+  protected statusResponse (req: Request, res: Response, options: HTTPResponseOptions<T>): void {
     let { keep, message, status, success, ...data } = options;
 
     //Todo: Do something with keep

@@ -10,6 +10,30 @@ sendGrid.setApiKey(configs.app.sendGridKey as string);
 export default class NotificationService {
 
   /**
+   * @description A NotificationService.
+   *
+   * @private
+   * @static
+   * @type {NotificationService}
+   * @memberof NotificationService
+   */
+  private static singleton: NotificationService;
+
+  /**
+   * @description Creates a singleton singleton of NotificationService.
+   * 
+   * @memberof NotificationService
+   */
+  constructor (){
+
+    NotificationService.singleton = !!NotificationService.singleton
+      ? NotificationService.singleton
+      : this;
+    
+    return NotificationService.singleton;
+  }
+
+  /**
    * @description Sends an email notification
    *
    * @param {string} to the receiver's email

@@ -23,17 +23,29 @@ export default {
   },
 
   error: {
-    expired: `:value link has expired`,
-    invalid: `Invalid :value link`,
-    verified: `:value link has already been used`,
     notFound: `:value not found`,
-    server: `Internal error occured, try again later!`
+    required: `:value is required`,
+    verified: `:value link has already been used`,
+    server: `Internal error occured, try again later!`,
+    conflict: 'Email address has been used',
+    password: {
+      invalid: `Invalid password reset link`,
+      expired: `Update password link has expired`,
+      used: `Password reset link has already been used`,
+      same: `New password must be different from old password`
+    },
+    verification: {
+      invalid: `Invalid :value link`,
+      expired: `Verification link has expired`
+    }
   },
   
   authentication: {
     invalid: 'Invalid email and password',
     required: 'Email and password are required',
-    success: 'User authentication successfull'
+    success: 'User authentication successfull',
+    expired: `Authentication token has expired`,
+    unverified: `Please confirm your email address to activate your account`
   },
 
   entity: {

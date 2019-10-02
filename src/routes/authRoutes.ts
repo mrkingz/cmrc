@@ -16,7 +16,7 @@ authRoutes.get('/csrfToken', (req: Request, res: Response) => {
 /**
  * Sign up a new user
  */
-authRoutes.post('/signup',  userController.signUp());
+authRoutes.post('/signup', userController.checkIfUniqueEmail(), userController.signUp());
 
 /**
  * Update password
@@ -31,6 +31,11 @@ authRoutes.get('/verification/:token',  userController.accountVerification());
 /**
  * Send a password reset email
  */
-authRoutes.post('/passwordReset', userController.sendPasswordResetLink());
+authRoutes.post('/password', userController.sendPasswordResetLink());
+
+/**
+ * Send a password reset email
+ */
+authRoutes.put('/password/:token', userController.updatePassword());
 
 export default authRoutes

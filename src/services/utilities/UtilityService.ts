@@ -1,5 +1,5 @@
 import lang from '../../lang';
-import CustomError from '../../validations/CustomError';
+import CustomError from './CustomError';
 import isEmpty = require('lodash.isempty');
 export default class UtilityService {
 
@@ -67,7 +67,7 @@ export default class UtilityService {
    */
   protected getLang (key: string, target: string = ''): string | object {
     const lang = this.deep(key, this.lang as {});
-    
+
     if (!isEmpty(lang)) {
       return lang.constructor === String
         ? (lang as string).replace(':value', target)
@@ -75,6 +75,19 @@ export default class UtilityService {
     }
 
     throw this.rejectionError(`${key} is not a valid key`);
+  }
+
+  /**
+   * @description Gets the corresponding message from langs object
+   *
+   * @protected
+   * @param {string} key
+   * @param {string} [target]
+   * @returns {string}
+   * @memberof UtilityService
+   */
+  protected getMessage (key: string, target?: string): string {
+    return this.getLang(key, target) as string;
   }
 
   /**
