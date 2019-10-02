@@ -5,7 +5,6 @@ import {
 } from 'typeorm';
 import AbstractEntity from './AbsrtactEntity';
 import { IsEmail, MinLength, MaxLength, IsDefined, IsNotEmpty, Allow, ValidateIf } from 'class-validator';
-import { IsUniqueEmail } from '../validations/UserDecorators';
 
 @Entity('users')
 export default class User extends AbstractEntity {
@@ -27,12 +26,12 @@ export default class User extends AbstractEntity {
   @IsDefined({ message: '$property is required'})
   @Column({ type: 'varchar', unique: false, length: 50 })
   @IsEmail({}, { message: `Please, enter a valid email address` })
-  // @IsUniqueEmail({ message: 'Email address has been used'})
   email!: string;
 
   @IsDefined({ message: '$property is required'})
   @Column({ type: 'varchar', length: 60 })
   @MinLength(8, { message: `Password must be at least $constraint1 characters` })
+  @MaxLength(30, { message: `Password cannot be longer than $constraint1 characters` })
   password!: string
 
   @Column({ type: 'varchar', nullable: true, unique: true, length: 20 })
@@ -46,7 +45,11 @@ export default class User extends AbstractEntity {
   rememberMeToken!: string;
 
   @Column({ type: 'boolean', default: false })
+  passwordReset!: boolean;
+
+  @Column({ type: 'boolean', default: false })
   isAdmin!: boolean;
+
 
   @Column({ type: 'boolean', default: false })
   isVerified!: boolean;

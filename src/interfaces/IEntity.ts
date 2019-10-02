@@ -1,4 +1,5 @@
-import { Timestamp } from "typeorm";
+import { Timestamp, FindOneOptions, FindConditions } from 'typeorm';
+
 import { ValidatorOptions } from "class-validator";
 
 export interface IUser {
@@ -11,6 +12,8 @@ export interface IUser {
   isAdmin?: boolean;
   isVerified?: boolean;
   photo?: string;
+  passwordReset?: boolean;
+  rememberMeToken?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
@@ -18,9 +21,12 @@ export interface IUser {
 
 export interface UpdateOptions {
   message?: string;
-  skip?: Array<string>;
 }
 
 export interface IValidatorOptions extends ValidatorOptions {
   skip?: Array<string>
 }
+
+export interface IFindOneOptions<T> extends FindOneOptions {};
+
+export interface IFindConditions<T> extends FindConditions<object> {};
