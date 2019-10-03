@@ -1,8 +1,9 @@
-import express, { Request, Response} from 'express';
+import express, { Request, Response, Router} from 'express';
 import userController from '../controllers/UserController'
 
 
-const authRoutes = express.Router();
+const authRoutes: Router = express.Router();
+
 /**
  * Gets the csrf token
  */

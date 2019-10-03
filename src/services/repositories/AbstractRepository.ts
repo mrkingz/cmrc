@@ -35,12 +35,11 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @type {Array<string>}
    * @memberof AbstractRepository
    */
-  protected readonly fillables: Array<string>;
+  protected readonly fillables: Array<string> = [];
 
   constructor (entityName: string) {
     super();
     this.entityName = entityName;
-    this.fillables = [];
   }
 
   /**
@@ -53,14 +52,34 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   public abstract create (fields: T): T;
 
   /**
-   * @description Save a new instance/row of the entity
-   * 
-   * @param entity 
-   * @returns {Promise<T>} the created entity
+   * @description Filter out the mass assignable/fillable fields
+   *
+   * @private
+   * @param {{ [key: string]: string }} values
+   * @returns {*}
+   * @memberof AbstractRepository
    */
-  public async save (entity: T): Promise<T> {
-    const { ...data } = await this.getRepository().save(entity);
-    return data;
+  private filter (values: { [key: string]: string }): any {
+    let fillables: { [key: string]: string } = {};
+    if (!isEmpty(this.getFillables())) {
+      this.getFillables().forEach(value => {
+        fillables[value] = values[value];
+      });
+    }
+
+    return fillables;
+  }
+
+  /**
+   * @description Finds an instance of an entity
+   *
+   * @param {FindOneOptions} options the find conditions
+   * @returns {Promise<T>} the found entity of null
+   * @memberof AbstractRepository
+   */
+  public async findOne (options: FindOneOptions<T>): Promise<T> {
+    const { ...data } = await this.getRepository().findOne(options) as T;
+    return data; 
   }
 
   /**
@@ -86,28 +105,6 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   }
 
   /**
-   * @description Finds an instance of an entity
-   *
-   * @param {FindOneOptions} options the find conditions
-   * @returns {Promise<T>} the found entity of null
-   * @memberof AbstractRepository
-   */
-  public async findOne (options: FindOneOptions<T>): Promise<T> {
-    const { ...data } = await this.getRepository().findOne(options) as T;
-    return data; 
-  }
-
-  /**
-   * @description Gets an instance of the entity's repository interface
-   * Subclass should override this method to return
-   *
-   * @private
-   * @returns
-   * @memberof AbstractRepository
-   */
-  public abstract getRepository (): any;
-
-  /**
    * @description Gets the fillable properties. Subclass must return array of fillables
    *
    * @abstract
@@ -129,6 +126,27 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   }
 
   /**
+   * @description Gets an instance of the entity's repository interface
+   * Subclass should override this method to return
+   *
+   * @private
+   * @returns
+   * @memberof AbstractRepository
+   */
+  public abstract getRepository (): any;
+
+  /**
+   * @description Saves a new instance/row of the entity
+   * 
+   * @param fields the entity fields
+   * @returns {Promise<T>} the created fields
+   */
+  public async save (fields: T): Promise<T> {
+    const { ...data } = await this.getRepository().save(this.filter(fields as {}));
+    return data;
+  }
+
+  /**
    * @description Sets the name of the entity
    *
    * @param {string} entityName the name of a database entity/model
@@ -143,44 +161,24 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    *
    * @protected
    * @param {object} values
-   * @param {string} [options] options
-   * - options.message (optional) message to send if enitiy to update does not exist
-   * - options.skip array of fields not to validate
+   * @param {string} [message] optional message to send if entity to update does not exist
    * @param {function} [callback] optional callback function before updating
    * @returns
    * @memberof BaseController
    */
-  public async update (condition: FindConditions<T>, updates: T, options: UpdateOptions = {},  callback?: Function): Promise<T> {
-    const message = options.message || this.getLang('error.notFound', this.getEntityName()) as string;
-    let entity: { [key: string]: string } = await this.findOneOrFail(condition, message as string) as {};
+  public async update (condition: FindConditions<T>, updates: T, message?: string,  callback?: Function): Promise<T> {
+    message = message || this.getMessage('error.notFound', this.getEntityName());
+    const entity: T = await this.findOneOrFail(condition, message as string);
 
     if (typeof callback === 'function') {
       await callback(entity);
     }
     
-    // Update the found entity with the incoming updates
-    const updatedEntity = this.getRepository().merge(entity, updates) as T;
-
-    await this.getRepository().update({ id: entity.id }, this.filter(updatedEntity as {}));
-
-    return updatedEntity;
+    return await this.getRepository().save({ ...entity, ...updates });
   }
-
-  private filter (values: { [key: string]: string }): any {
-    let fillables: { [key: string]: string } = {};
-    if (!isEmpty(this.getFillables())) {
-      this.getFillables().forEach(value => {
-        fillables[value] = values[value];
-      });
-    } else {
-      const { updatedAt, ...otherDetails } = values;
-      fillables = otherDetails;
-    }
-    return fillables;
-  }
-
+  
   /**
-   * @description Validate form fields
+   * @description Validate fields
    * 
    * @param {T} entity the database entity
    * @param {ValidatorOptions} [options] validation options
@@ -189,7 +187,6 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    */
   public async validator (entity: T, options: IValidatorOptions = {}): Promise<T> {
     const { skip, ...extraOptions } = options
-
     entity = this.getRepository().create(entity) as T;
 
     let error = await validate(entity, { 

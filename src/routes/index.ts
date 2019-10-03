@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
-import authRoutes from './authRoutes';
+
 import configs from '../configs';
+import authRoutes from './authRoutes';
+import userRoutes from './userRoutes';
 import sanitizeFields from '../middlewares/sanitizeFields';
 
 const mainRouter = Router();
@@ -14,5 +16,6 @@ mainRouter.get('/', (req: Request, res: Response) => {
 
 mainRouter.use(sanitizeFields());
 mainRouter.use('/auth', authRoutes);
+mainRouter.use('/users', userRoutes);
 
 export default mainRouter;
