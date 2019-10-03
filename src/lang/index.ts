@@ -35,8 +35,12 @@ export default {
       same: `New password must be different from old password`
     },
     verification: {
-      invalid: `Invalid :value link`,
+      invalid: `Invalid verification link`,
       expired: `Verification link has expired`
+    },
+    authentication: {
+      invalid: 'Invalid authentication token',
+      notFound: `Authentication token not provided`
     }
   },
   
@@ -45,7 +49,10 @@ export default {
     required: 'Email and password are required',
     success: 'User authentication successfull',
     expired: `Authentication token has expired`,
-    unverified: `Please confirm your email address to activate your account`
+    unverified: `Please confirm your email address to activate your account`,
+    token: {
+      notFound: `Authentication token not provided`,
+    }
   },
 
   entity: {

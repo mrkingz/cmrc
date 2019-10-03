@@ -23,8 +23,8 @@ export default class UserRepository extends AbstractRepository<IUser> {
    * @memberof UserRepository
    */
   protected readonly fillables: Array<string> = [
-    'firstName', 'lastName', 'email', 'password', 'isVerified', 'passwordReset'
-  ];
+    'firstName', 'lastName', 'email', 'password'
+  ]; 
 
   /**
    * @description Creates an singleton singleton of UserRepository.

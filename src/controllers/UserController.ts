@@ -14,6 +14,7 @@ import NotificationService from '../services/notifications/NotificationService';
 import AbstractRepository from '../services/repositories/AbstractRepository';
 import { NextFunction } from 'connect';
 import isEmpty from 'lodash.isempty';
+import { userInfo } from 'os';
 
 sendGrid.setApiKey(configs.app.sendGridKey as string)
 
@@ -99,26 +100,64 @@ class UserController extends AbstractController<IUser> {
   }
 
   /**
+   * @description Authenticate user with email and password
+   *
+   * @returns {Function}
+   * @memberof UserController
+   */
+  public authenticateUser () {
+    return this.tryCatch(async (req: Request, res: Response, next: NextFunction) => {
+      const { id } = this.decodeJWT(this.extractToken(req), {}, this.AUTHENTICATION);
+      const user: IUser = await this.getRespository().findOneOrFail({ id } as {});    
+
+      req.body.user = this.removePasswordFromUserData(user);
+      return next;
+    })
+  }
+
+  /**
+   * @description Extracts the authentication token associated with the request
+   *
+   * @private
+   * @param {Request} req the HTTP request object
+   * @returns {string} the extected token
+   * @memberof UserController
+   */
+  private extractToken (req: Request): string {
+    let token = req.headers['x-access-token']
+      || req.cookies['x-access-token'] 
+      || req.query['x-access-token'] 
+      || req.body['x-access-token'];
+      
+    if (token) {
+      const match = new RegExp('^Bearer').exec(token);
+      token = match ? token.split(' ')[1] : token;
+      return token.trim();
+    }
+
+    throw this.rejectionError(this.getMessage('authentication.token.notFound'), this.UNAUTHORIZED);
+  }
+
+  /**
    * @description Sign in a registered user
    *
-   * @returns {Function} an async function which accepts an express middleware function 
-   * as a callback to handle the POST request
+   * @returns {Function}
    * @memberof UserController
    */
   public signIn () {
     return this.tryCatch(async (req: Request) => {
       const { email, password } = req.body;
       const langKey = this.AUTHENTICATION;
-      let message: string;
+      let message: string = this.getMessage(`${langKey}.${(email ? 'invalid' : 'required')}`);
+
       const user: IUser = await this.getRespository().findOneOrFail(
-        { email } as FindOneOptions<IUser>, this.getMessage(`${langKey}.${(email ? 'invalid' : 'required')}`)
+        { email } as FindOneOptions<IUser>, message
       );
 
-      if (!user.isVerified) {
+      if (user.isVerified) {
         message = this.getMessage(`${langKey}.required`);
-        console.log(password, user.password)
         if (this.confirmPassword(password, user.password as string, message)) { 
-          const token: string = this.generateJWT({ id: user.id, isAdmin: user.isAdmin })
+          const token: string = this.generateJWT({ id: user.id })
           return this.getResponseData( 
             { ...this.removePasswordFromUserData(user), token }, 
             this.getMessage(`${langKey}.success`)
@@ -136,8 +175,8 @@ class UserController extends AbstractController<IUser> {
   /**
    * @description Sign up a new user
    * 
-   * @returns {Function} an async function which accepts an express middleware function 
-   * as a callback to handle the POST request
+   * @returns {Function}
+   * @memberof UserController
    */
   public signUp () {
     return this.tryCatch(async (req: Request): Promise<object> => {
@@ -161,27 +200,25 @@ class UserController extends AbstractController<IUser> {
   /**
    * @description Verifies registration
    *
-   * @returns {Function} an async function which accepts an express middleware function 
-   * as a callback to handle the GET request
+   * @returns {Function}
    * @memberof UserController
    */
   public accountVerification () {
     return this.tryCatch(async (req: Request): Promise<object> => {
-      const text: string = this.VERIFICATION;
       
-      const decoded = this.validateToken(req.params.token, text);
+      const decoded = this.validateToken(req.params.token, this.VERIFICATION);
 
       const updatedUser = await this.getRespository().update(
         { id: decoded.id }, 
         { isVerified: true }, 
-        { message: this.getMessage('error.verification.invalid', this.VERIFICATION) },
+        this.getMessage(`error.${this.VERIFICATION}.invalid`),
         /*
          * Callback function to check if email has been verified previously
          */
         (user: IUser) => {
-          if (!user.isVerified) {
+          if (user.isVerified) {
             throw this.rejectionError(
-              this.getMessage('error.verified', this.capitalizeFirst(text)), this.UNAUTHORIZED
+              this.getMessage('error.verified', this.capitalizeFirst(this.VERIFICATION)), this.UNAUTHORIZED
             );
           }
         }
@@ -194,6 +231,12 @@ class UserController extends AbstractController<IUser> {
     });
   }
 
+  /**
+   * @description Check if email has been used
+   *
+   * @returns {Function}
+   * @memberof UserController
+   */
   public checkIfUniqueEmail () {
     return this.tryCatch(async (req: Request, res: Response, next: NextFunction): Promise<object> => {
       const { email } = req.body;
@@ -201,6 +244,7 @@ class UserController extends AbstractController<IUser> {
       if (isEmpty(data)) {
         return next;
       }  
+
       throw this.rejectionError(this.getMessage('error.conflict'), this.CONFLICT)
     })
   }
@@ -236,7 +280,7 @@ class UserController extends AbstractController<IUser> {
    * @protected
    * @param {IUser} user
    * @param {string} emailType the type of email
-   * @returns
+   * @returns {IMailOptions} the email template
    * @memberof UserController
    */
   private getMailBody(user: IUser, emailType: string): IMailOptions {
@@ -318,18 +362,11 @@ class UserController extends AbstractController<IUser> {
       return jwt.verify(token, secret as string, { issuer, ...configOptions }) as Decoded;
     } catch (error) {
       let message!: string;
-
-      if (error.toString().indexOf('jwt expired')) {
+      if (error.toString().indexOf('jwt expired') > -1) {
         message = this.getMessage(`error.${tokenType}.expired`);
       } else {
-        switch (tokenType) {
-          case this.PASSWORD:
-          case this.VERIFICATION: 
-            message = this.getMessage(`error.${tokenType}.invalid`, tokenType);
-            break;
-        }
+        message = this.getMessage(`error.${tokenType}.invalid`, tokenType);
       }
-
       throw this.rejectionError(message, this.UNAUTHORIZED);
     }
   }
@@ -347,8 +384,7 @@ class UserController extends AbstractController<IUser> {
   /**
    * @description Sends a password reset email 
    *
-   * @returns {Function} an async function which accepts an express middleware function 
-   * as a callback to handle the POST request
+   * @returns {Function} 
    * @memberof UserController
    */
   public sendPasswordResetLink () {
@@ -379,8 +415,7 @@ class UserController extends AbstractController<IUser> {
   /**
    * @description Updates password
    *
-   * @returns {Function} an async function which accepts an express middleware function 
-   * as a callback to handle the PUT request
+   * @returns {Function}
    * @memberof UserController
    */
   public updatePassword () {
@@ -392,16 +427,15 @@ class UserController extends AbstractController<IUser> {
         skip: ['firstName', 'lastName', 'email'], // Skip these fields during validation
       });
 
-      // Update the password
       const updatedUser = await this.getRespository().update(
         { id }, 
         { passwordReset: false, password: this.hashPassword(password as string) },
-        { message: this.getMessage('error.password.invalid') },
+        this.getMessage(`error.${this.PASSWORD}.invalid`),
         // Callback to check if user actually enters a different password
         // The callback throws an error if they match
         async (user: IUser) => {
-          if (!user.passwordReset) { // false, if link has already been used
-            throw this.rejectionError(this.getMessage('error.password.used'), this.UNAUTHORIZED)
+          if (user.passwordReset) { // false, if link has already been used
+            throw this.rejectionError(this.getMessage(`error.${this.PASSWORD}.used`), this.UNAUTHORIZED)
           } else if (this.confirmPassword(password, user.password as string, 
               this.getMessage(`error.required`, this.PASSWORD))) {
             throw this.rejectionError(this.getMessage(`error.${this.PASSWORD}.same`), this.UNAUTHORIZED);
@@ -410,8 +444,37 @@ class UserController extends AbstractController<IUser> {
       );
 
       return this.getResponseData(
-        this.removePasswordFromUserData(updatedUser), this.getMessage('entity.updated', 'Password')
+        this.removePasswordFromUserData(updatedUser),
+        this.getMessage('entity.updated', this.capitalizeFirst(this.PASSWORD))
       )
+    });
+  }
+
+  /**
+   * @description Update profile details
+   *
+   * @returns {Function}
+   * @memberof UserController
+   */
+  public updateProfile () {
+    return this.tryCatch(async (req: Request) => {
+      const { user, ...details } = req.body;
+      let updates: { [key: string]: string} = {};
+      Object.keys(details).forEach(key => { updates[key] = details[key]; });
+     
+      updates = await this.getRespository().validator(updates, {
+        // skip other fillable fields that are not being updated
+        skip: this.getRespository().getFillables().filter(field => !Object.keys(updates).includes(field))
+      }) as {};
+
+      const updated = await this.getRespository().update({ id: user.id }, {
+        ...updates, email: user.email, password: user.password
+      });
+
+      return this.getResponseData(
+        this.removePasswordFromUserData(updated), 
+        this.getMessage('entity.updated', 'Profile')
+      );
     });
   }
 
@@ -467,4 +530,7 @@ class UserController extends AbstractController<IUser> {
   }
 }
 
-export default new UserController(new NotificationService(), new UserRepository());
+export default new UserController(
+  new NotificationService(), 
+  new UserRepository()
+);

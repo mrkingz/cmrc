@@ -1,10 +1,10 @@
 import {
   Entity, 
   Column,
-  BeforeInsert,
+  BeforeInsert
 } from 'typeorm';
 import AbstractEntity from './AbsrtactEntity';
-import { IsEmail, MinLength, MaxLength, IsDefined, IsNotEmpty, Allow, ValidateIf } from 'class-validator';
+import { IsEmail, MinLength, MaxLength, IsDefined, IsNotEmpty, ValidateIf } from 'class-validator';
 
 @Entity('users')
 export default class User extends AbstractEntity {
@@ -34,9 +34,11 @@ export default class User extends AbstractEntity {
   @MaxLength(30, { message: `Password cannot be longer than $constraint1 characters` })
   password!: string
 
+  @ValidateIf(o => o.photo !== undefined)
   @Column({ type: 'varchar', nullable: true, unique: true, length: 20 })
   phoneNumber!: string
 
+  @ValidateIf(o => o.photo !== undefined)
   @Column({ type: 'varchar', nullable: true,  unique: true, length: 100 })
   photo!: string;
 
@@ -54,7 +56,6 @@ export default class User extends AbstractEntity {
   @Column({ type: 'boolean', default: false })
   isVerified!: boolean;
 
-  // Before insert subscriber
   @BeforeInsert()
   beforeInsert() {
     this.email = this.email.toLowerCase();
