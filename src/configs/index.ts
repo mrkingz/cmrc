@@ -14,7 +14,7 @@ const configs = {
     sendGridKey: process.env.SENDGRID_API_KEY,
     fromEmail: process.env.FROM_EMAIL,
     admin: {
-      email: process.env.EMAIL,
+      email: process.env.ADMIN_EMAIL,
       password: process.env.ADMIN_PASSWORD
     },
     jwt: {

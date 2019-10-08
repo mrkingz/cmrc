@@ -150,7 +150,7 @@ export default abstract class AbstractRepository<T> extends UtilityService {
 
     const { ...data } = await this.getRepository().findOne(options) as T;
     if (isEmpty(data)) {
-      message = message || this.getLang('error.notFound') as string;
+      message = message || this.getMessage('error.notFound', this.getEntityName()) as string;
 
       throw this.rejectionError(message, status.NOT_FOUND);
     }

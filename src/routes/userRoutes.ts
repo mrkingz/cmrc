@@ -17,4 +17,10 @@ userRoutes.get('/',
   userController.authorizeUser(),
   userController.getUsers());
 
+/**
+ * Route to get a single user
+ */
+userRoutes.get('/:userId', 
+  userController.getProfile());
+
 export default userRoutes;

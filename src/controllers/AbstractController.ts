@@ -125,7 +125,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @returns {object}
    * @memberof AbstractController
    */
-  protected getResponseData (data: object, message: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
+  protected getResponseData (data: object, message?: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
     const { token, pagination, ...details } = data as any;
 
     if (isEmpty(data)) {
@@ -133,14 +133,14 @@ export default abstract class AbstractController<T>  extends UtilityService {
     } else {
       const entity = isUndefined(pagination) ? details : details.data;
 
-      const response: {[key: string]: string | number | object } = { 
+      let response: {[key: string]: string | number | object } = { 
         status,
-        message, 
         data: {
           [this.getResponseDataKey(entity)]: entity,
           token
         }
       };
+      response = message ? { ...response, message } : response;
 
       return Array.isArray(entity) && !isEmpty(entity)
         ? { ...response, meta: { pagination } }

@@ -10,11 +10,6 @@ import { Not } from 'typeorm';
 
 sendGrid.setApiKey(configs.app.sendGridKey as string)
 
-type Decoded = {
-  id: string,
-  isAdmin: boolean,
-  exp: number,
-}
 class UserController extends AuthController {
 
   /**
@@ -51,9 +46,9 @@ class UserController extends AuthController {
    * @returns
    * @memberof UserController
    */
-  public getUsers () {
+  public getUsers (): RequestHandler {
     return this.tryCatch(async (req: Request) => {
-      const data = await this.getRepository().paginate({ 
+      const users: Array<IUser> = await this.getRepository().paginate({ 
         select: this.getRepository().getSelectables(),
         where: { id: Not(req.body.user.id) },
         page: req.query.page,
@@ -62,7 +57,43 @@ class UserController extends AuthController {
         sortBy: req.query.sortBy,
       });
 
-      return this.getResponseData(data, this.getMessage('entity.list', 'users'));
+      return this.getResponseData(users, this.getMessage('entity.list', 'Users'));
+    });
+  }
+
+  /**
+   * @description Gets user profile details
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public getProfile (): RequestHandler {
+    return this.tryCatch(async (req: Request) => {
+      const { isAdmin, id } = req.body.user;
+      const { userId } = req.params;
+      let user!: IUser;
+      /*
+       * If user is the authenticated user
+       * then, id from params must match the id of the authenticated
+       */ 
+      if (id === userId) {
+        user = req.body.user
+      } 
+      /*
+       * If id from params does not match,
+       * Check if user is admin, as only admin can view other user's profile
+       * Otherwise, throw an unauthorized message
+       */
+      else if (isAdmin) {
+        user = await this.getRepository().findOneOrFail({ id: userId } as {});
+      } else {
+        throw this.rejectionError(this.getMessage('error.unauthorized'), this.UNAUTHORIZED);
+      }
+
+      return this.getResponseData(
+        this.removePasswordFromUserData(user),
+        this.getMessage('entity.retrieved', 'Prifile')
+      );
     });
   }
 
@@ -85,8 +116,10 @@ class UserController extends AuthController {
         { id }, 
         { passwordReset: false, password: this.hashPassword(password as string) },
         this.getMessage(`error.${this.PASSWORD}.invalid`),
-        // Callback to check if user actually enters a different password
-        // The callback throws an error if they match
+        /*
+         * Callback to check if user actually enters a different password
+         * The callback throws an error if they match
+         */ 
         async (user: IUser) => {
           if (user.passwordReset) { // false, if link has already been used
             throw this.rejectionError(this.getMessage(`error.${this.PASSWORD}.used`), this.UNAUTHORIZED)
