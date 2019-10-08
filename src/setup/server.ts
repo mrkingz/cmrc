@@ -2,6 +2,7 @@ import configs from '../configs';
 import express, { Application } from 'express';
 import appInit from './app';
 import databaseConnection from './database';
+import { Connection } from 'typeorm';
 
 const app: Application = express();
 
@@ -12,10 +13,10 @@ const app: Application = express();
    */
   await appInit(app);
   await databaseConnection(app.get('env')); 
-  
+
   const PORT = configs.app.port || 3000;
   
-  // We can start our app now
+  // We can start our app now 
   await app.listen(PORT, (): void => {
     console.log(`Server running on PORT ${PORT} in ${app.get('env')} mode`);
   });

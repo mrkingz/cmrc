@@ -27,6 +27,18 @@ export default class UserRepository extends AbstractRepository<IUser> {
   ]; 
 
   /**
+   * @description  Array of fields that cn be selected
+   *
+   * @protected
+   * @type {Array<string>}
+   * @memberof UserRepository
+   */
+  protected readonly selectables: Array<string> = [
+    'id','firstName', 'lastName', 'email', 'isAdmin', 'photo', 'passwordReset',
+    'rememberMeToken', 'phoneNumber', 'isVerified', 'createdAt', 'updatedAt'
+  ]; 
+
+  /**
    * @description Creates an singleton singleton of UserRepository.
    * 
    * @memberof UserRepository

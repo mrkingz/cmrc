@@ -1,5 +1,5 @@
 import { NextFunction } from 'connect';
-import { Request, Response } from 'express';
+import { Request, Response, response } from 'express';
 
 import configs from '../configs';
 import constants from '../constants';
@@ -8,6 +8,7 @@ import HTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
 import RespositoryService from '../services/repositories/AbstractRepository';
 import isEmpty from 'lodash.isempty';
 import IHTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
+import { isUndefined } from 'util';
 
 const { status } = constants;
 export default abstract class AbstractController<T>  extends UtilityService {
@@ -78,7 +79,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @returns {RespositoryService<T>}
    * @memberof AbstractController
    */
-  protected abstract getRespository (): RespositoryService<T>;
+  protected abstract getRepository (): RespositoryService<T>;
 
   /**
    * @description Runs a callback function asynchronously
@@ -125,38 +126,52 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @memberof AbstractController
    */
   protected getResponseData (data: object, message: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
-    return isEmpty(data) 
-      ? { status, message }
-      : { status, message, data: this.mapDataToEntityName(data) } as object;
+    const { token, pagination, ...details } = data as any;
+
+    if (isEmpty(data)) {
+      return { status, message };
+    } else {
+      const entity = isUndefined(pagination) ? details : details.data;
+
+      const response: {[key: string]: string | number | object } = { 
+        status,
+        message, 
+        data: {
+          [this.getResponseDataKey(entity)]: entity,
+          token
+        }
+      };
+
+      return Array.isArray(entity) && !isEmpty(entity)
+        ? { ...response, meta: { pagination } }
+        : response;
+    }
   }
 
   /**
-   * @description Map the HTTP response data to entity name
+   * @description Gets the corresponding key the data will be mapped to
    * 
    * @param {Object | Array<any>} data 
    * @returns object
    */
-  private mapDataToEntityName (data: object | Array<any>): object {
-    let key = this.getRespository().getEntityName().toLowerCase();
-    const { token, ...otherDetails } = data as any;
-    const response: { [key: string]: any } = {};
-
-     /**
-      * Check if data is an array
-      * We would pluralize it accordingly
-      */ 
+  private getResponseDataKey (data: T | Array<any>): string {
+    let key = this.getRepository().getEntityName().toLowerCase();
+    /**
+     * Check if data is an array
+     * We would pluralize it accordingly
+     */ 
     if (Array.isArray(data)) {
       /**
-       *  If the name of the entity ends with 'y',
-       *  pluralize the key using 'ies'; otherwise, just add 's'
+       * If the name of the entity ends with 'y',
+       * pluralize the key using 'ies'; otherwise, just add 's'
        */ 
       key = key.endsWith('y')
-        ? `${key.substr(0, key.length)}ies` 
-        : `${key}s`;
+      ? `${key.substr(0, key.length)}ies` 
+      : `${key}s`;
+
     }
-    
-    response[key] = otherDetails;
-    return { ...response, token };
+
+    return key;
   }
 
   /**

@@ -1,3 +1,4 @@
+import paginate from 'express-paginate';
 import { Router, Request, Response } from 'express';
 
 import configs from '../configs';

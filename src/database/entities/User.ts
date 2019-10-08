@@ -56,6 +56,7 @@ export default class User extends AbstractEntity {
   @Column({ type: 'boolean', default: false })
   isVerified!: boolean;
 
+  // Before insert subscriber
   @BeforeInsert()
   beforeInsert() {
     this.email = this.email.toLowerCase();

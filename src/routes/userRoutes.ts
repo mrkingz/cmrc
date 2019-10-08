@@ -3,10 +3,18 @@ import userController from '../controllers/UserController';
 
 const userRoutes: Router = express.Router();
 
-/**
- * Update profile
- */
-userRoutes.put('/profile', userController.authenticateUser(), userController.updateProfile());
+userRoutes.all('/*', userController.authenticateUser());
 
+/**
+ * Route to update profile
+ */
+userRoutes.put('/profile', userController.updateProfile());
+
+/**
+ * Route to get all users
+ */
+userRoutes.get('/', 
+  userController.authorizeUser(),
+  userController.getUsers());
 
 export default userRoutes;

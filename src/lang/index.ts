@@ -28,6 +28,7 @@ export default {
     verified: `:value link has already been used`,
     server: `Internal error occured, try again later!`,
     conflict: 'Email address has been used',
+    unauthorized: `You do not have the privilege for this operation`,
     password: {
       invalid: `Invalid password reset link`,
       expired: `Update password link has expired`,
@@ -41,6 +42,11 @@ export default {
     authentication: {
       invalid: 'Invalid authentication token',
       notFound: `Authentication token not provided`
+    },
+    pagination: {
+      page: `Page number cannot be less than 1`,
+      minItems: `Paginated items per page cannot be less than :value`,
+      maxItems: `Paginated items per page cannot be greater than :value`
     }
   },
   
@@ -59,5 +65,6 @@ export default {
     created: `:value successfully created`,
     updated: `:value successfully updated`,
     deleted: `:value successfully deleted`,
+    list: `List of :value`
   }
 }
