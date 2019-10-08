@@ -3,7 +3,7 @@ import userController from '../../controllers/UserController';
 
 export default [{
   firstName: 'Kingsley',
-  lastName: 'Frank',
+  lastName: 'Frank-Demesi',
   email: configs.app.admin.email,
   password: userController.hashPassword(configs.app.admin.password as string),
   photo: null,
