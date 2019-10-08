@@ -1,10 +1,11 @@
 import isEmpty from 'lodash.isempty';
-import { FindOneOptions, FindConditions } from 'typeorm';
+import { FindOneOptions, FindConditions, Not } from 'typeorm';
 import { validate, ValidationError } from 'class-validator';
 
 import constants from '../../constants';
+import configs from '../../configs/index';
 import UtilityService from '../utilities/UtilityService';
-import { UpdateOptions, IValidatorOptions } from '../../interfaces/IEntity';
+import { IValidatorOptions, IFindConditions } from '../../interfaces/IEntity';
 
 const { status } = constants;
 
@@ -37,6 +38,8 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    */
   protected readonly fillables: Array<string> = [];
 
+  protected readonly selectables: Array<string> = [];
+
   constructor (entityName: string) {
     super();
     this.entityName = entityName;
@@ -68,6 +71,57 @@ export default abstract class AbstractRepository<T> extends UtilityService {
     }
 
     return fillables;
+  }
+
+  /**
+   * @description Paginate response data
+   *
+   * @param {IPaginate} options
+   * @returns {Promise<any>}
+   * @memberof AbstractRepository
+   */
+  public async paginate(findConditions: IFindConditions): Promise<any> {
+    const { page, limit, sort, sortBy, ...options } = findConditions;
+    const itemsPerPage: number = await this.computeItemsPerPage(Number(limit), Number(page));
+    const [data, total] = await this.getRepository().findAndCount({
+      ...options,
+      order: { [sortBy as string || 'firstName']: sort ? sort.toString().toUpperCase() : '' },
+      skip: itemsPerPage  * ( Number(page) - 1 ),
+      take: itemsPerPage
+    });
+
+    return { 
+      data, 
+      pagination: {
+        itemsPerPage,
+        totalItems: total,
+        currentPage: Number(page) || 1,
+        totalPage: Math.ceil(total/itemsPerPage ),
+      }
+    }
+  }
+
+  /**
+   * 
+   *
+   * @private
+   * @param {number} limit
+   * @param {number} page
+   * @returns {Promise<number>}
+   * @memberof AbstractRepository
+   */
+  private async computeItemsPerPage (limit: number, page: number): Promise<number> {
+    const { minItemsPerPage, maxItemsPerPage } = configs.api.pagination;
+
+    if (limit < minItemsPerPage) {
+      throw this.rejectionError(this.getMessage('error.pagination.minItems', minItemsPerPage.toString()));
+    } else if (limit > maxItemsPerPage) {
+      throw this.rejectionError(this.getMessage('error.pagination.maxItems', maxItemsPerPage.toString()));
+    } else if (page <= 0) {
+      throw this.rejectionError(this.getMessage('error.pagination.page'));
+    }
+
+    return Number(limit || minItemsPerPage);
   }
 
   /**
@@ -134,6 +188,16 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @memberof AbstractRepository
    */
   public abstract getRepository (): any;
+
+  /**
+   * @description Gets an array of selectable fields
+   *
+   * @returns {Array<string>}
+   * @memberof AbstractRepository
+   */
+  public getSelectables(): Array<string> {
+    return this.selectables;
+  }
 
   /**
    * @description Saves a new instance/row of the entity

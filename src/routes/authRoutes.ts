@@ -17,7 +17,9 @@ authRoutes.get('/csrfToken', (req: Request, res: Response) => {
 /**
  * Sign up a new user
  */
-authRoutes.post('/signup', userController.checkIfUniqueEmail(), userController.signUp());
+authRoutes.post('/signup', 
+  userController.checkIfUniqueEmail(), 
+  userController.signUp());
 
 /**
  * Update password

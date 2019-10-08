@@ -13,6 +13,10 @@ const configs = {
     sentry: process.env.SENTRY,
     sendGridKey: process.env.SENDGRID_API_KEY,
     fromEmail: process.env.FROM_EMAIL,
+    admin: {
+      email: process.env.EMAIL,
+      password: process.env.ADMIN_PASSWORD
+    },
     jwt: {
       issuer: process.env.ISSUER,
       secret: process.env.JWT_SECRET
@@ -29,7 +33,8 @@ const configs = {
     lang: 'en',
     apiURL: 'https://cmrc.herokuapp.com',
     pagination: {
-      itemsPerPage: 20
+      minItemsPerPage: 20,
+      maxItemsPerPage: 100
     }
   },
 

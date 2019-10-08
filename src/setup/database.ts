@@ -12,14 +12,22 @@ import configs from '../configs';
 const dbConnection: Function = async (env: string): Promise<Connection> => {
   const getDatabaseURL: Function = configs.database.url;
 
-  return await createConnection({
+  const conn: Connection = await createConnection({
     type: 'postgres',
     logging: true,
     synchronize: env !== 'production',
     ssl: env === 'production',
     url: getDatabaseURL(),
-    entities: [path.join(__dirname, '../entities/*{.js,.ts}')]
+    entities: [path.join(__dirname, '../database/entities/*{.js,.ts}')],
+    migrations: [path.join(__dirname, '../database/migrations/*{.js,.ts}')],
+    cli: {
+      entitiesDir: path.join(__dirname, '../database/entities'),
+      migrationsDir:path.join(__dirname, '../database/migrations')
+    }
   })
+
+  await conn.runMigrations();
+  return conn;
 };
 
 export default dbConnection;
