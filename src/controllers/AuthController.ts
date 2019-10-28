@@ -1,16 +1,16 @@
 import bcrypt from 'bcrypt';
-import { Request, RequestHandler, NextFunction } from 'express';
+import isEmpty from 'lodash.isempty';
 import sendGrid from '@sendgrid/mail';
 import { FindOneOptions } from 'typeorm';
 import jwt, { VerifyOptions, SignOptions } from 'jsonwebtoken';
+import { Request, RequestHandler, NextFunction } from 'express';
 
 import configs from '../configs'
-import isEmpty from 'lodash.isempty';
-import { IUser } from '../interfaces/IEntity';
+import { IUser } from '../interfaces/User';
 import AbstractController from './AbstractController';
 import UserRepository from '../services/repositories/UserRepository';
-import IHTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
-import { IEmailLangs, IMailOptions } from '../interfaces/INotification';
+import IHTTPResponseOptions from '../interfaces/HTTPResponseOptions';
+import { IEmailLangs, IMailOptions } from '../interfaces/Notification';
 import NotificationService from '../services/notifications/NotificationService';
 import AbstractRepository from '../services/repositories/AbstractRepository';
 
@@ -75,7 +75,7 @@ export default abstract class AuthController extends AbstractController<IUser> {
    * @param {UserRepository} repository the repository service instane
    * @memberof AuthController
    */
-  constructor(notifier: NotificationService, repository: UserRepository) {
+  public constructor(notifier: NotificationService, repository: UserRepository) {
     super();
     this.notifier = notifier;
     this.repository = repository;
@@ -90,11 +90,12 @@ export default abstract class AuthController extends AbstractController<IUser> {
   public authenticateUser (): RequestHandler {
     return this.tryCatch(async (req: Request, res: Response, next: NextFunction) => {
       const { id } = this.decodeJWT(this.extractToken(req), {}, this.AUTHENTICATION);
-      const user: IUser = await this.getRepository().findOneOrFail({ id } as {});    
 
-      req.body.user = this.removePasswordFromUserData(user);
+      const user: IUser = await this.getRepository().findOneOrFail({ id } as {}); 
+      this.setAuthUser(user);
+
       return next;
-    })
+    });
   }
 
   /**
@@ -105,13 +106,12 @@ export default abstract class AuthController extends AbstractController<IUser> {
    */
   public authorizeUser (): RequestHandler {
     return this.tryCatch(async (req: Request, res: Response, next: NextFunction) => {
-      const user: IUser = req.body.user;
-      if (user.isAdmin) {
+      if (this.getAuthUser().isAdmin) {
         return next;
       }
 
       throw this.rejectionError(this.getMessage('error.unauthorized'), this.UNAUTHORIZED);
-    })
+    });
   }
 
   /**
@@ -173,31 +173,6 @@ export default abstract class AuthController extends AbstractController<IUser> {
   }
 
   /**
-   * @description Sign up a new user
-   * 
-   * @returns {Function}
-   * @memberof AuthController
-   */
-  public signUp (): RequestHandler {
-    return this.tryCatch(async (req: Request): Promise<object> => {
-      this.setBaseURL(req);
-      await this.getRepository().validator(req.body);
-
-      const user: IUser = await this.getRepository().save({
-        ...req.body, password: this.hashPassword(req.body.password) 
-      });
-
-      this.sendEmailNotification(user, this.VERIFICATION);
-
-      return this.getResponseData(
-        this.removePasswordFromUserData(user), 
-        this.getMessage(`email.${this.VERIFICATION}.message`), 
-        this.CREATED
-      );
-    });
-  }
-
-  /**
    * @description Verifies registration
    *
    * @returns {Function}
@@ -240,14 +215,15 @@ export default abstract class AuthController extends AbstractController<IUser> {
    */
   public checkIfUniqueEmail (): RequestHandler {
     return this.tryCatch(async (req: Request, res: Response, next: NextFunction): Promise<object> => {
-      const { email } = req.body;
+      const email: string = req.body.email.toLowerCase();
       const data = await this.getRepository().findOne({ email } as FindOneOptions<IUser>);
       if (isEmpty(data)) {
+        req.body.email = email
         return next;
       }  
 
-      throw this.rejectionError(this.getMessage('error.conflict'), this.CONFLICT)
-    })
+      throw this.rejectionError(this.getMessage('error.conflict'), this.CONFLICT);
+    });
   }
   
   /**
@@ -276,7 +252,7 @@ export default abstract class AuthController extends AbstractController<IUser> {
   }
 
   /**
-   * @description Generates mail options for verification email
+   * @description Generates notitifcation email body template
    *
    * @protected
    * @param {IUser} user
@@ -431,7 +407,7 @@ export default abstract class AuthController extends AbstractController<IUser> {
       throw this.rejectionError(
         this.getMessage(`error.${tokenType}.expired`, this.capitalizeFirst(tokenType)),
         this.UNAUTHORIZED
-      )
+      );
     }
 
     return decoded;

@@ -65,7 +65,7 @@ export default {
     created: `:value successfully created`,
     updated: `:value successfully updated`,
     deleted: `:value successfully deleted`,
-    list: `:value successfully retrieved`,
-    retrieved: `:value successfully retrieved`
+    retrieved: `:value successfully retrieved`,
+    emptyList: `:value list is currently empty`
   }
 }

@@ -1,11 +1,13 @@
 import isEmpty from 'lodash.isempty';
-import { FindOneOptions, FindConditions, Not } from 'typeorm';
+import { FindOneOptions, FindConditions } from 'typeorm';
 import { validate, ValidationError } from 'class-validator';
 
 import constants from '../../constants';
 import configs from '../../configs/index';
+import SearchClient from '../search/SearchClient';
 import UtilityService from '../utilities/UtilityService';
-import { IValidatorOptions, IFindConditions } from '../../interfaces/IEntity';
+import { IPaginationData } from '../../interfaces/Pangination';
+import { IValidatorOptions, IFindConditions } from '../../interfaces/Repository';
 
 const { status } = constants;
 
@@ -30,7 +32,8 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   private entityName: string;
 
   /**
-   * @description Array of fillable fields
+   * @description Array of fillable fields. Subclass should override this property 
+   * with a list of fillable fields
    *
    * @protected
    * @type {Array<string>}
@@ -38,6 +41,14 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    */
   protected readonly fillables: Array<string> = [];
 
+  /**
+   * @description List of selectable fields. Subclass should override this property 
+   * with a list of selectable fields
+   *
+   * @protected
+   * @type {Array<string>}
+   * @memberof AbstractRepository
+   */
   protected readonly selectables: Array<string> = [];
 
   constructor (entityName: string) {
@@ -46,7 +57,7 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   }
 
   /**
-   * @description Creates an insatnce of Repository
+   * @description Creates an insatnce of Repository for validation
    *
    * @param {T} fields
    * @returns {T}
@@ -62,7 +73,7 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @returns {*}
    * @memberof AbstractRepository
    */
-  private filter (values: { [key: string]: string }): any {
+  private filter (values: { [key: string]: string }): object {
     let fillables: { [key: string]: string } = {};
     if (!isEmpty(this.getFillables())) {
       this.getFillables().forEach(value => {
@@ -74,35 +85,7 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   }
 
   /**
-   * @description Paginate response data
-   *
-   * @param {IPaginate} options
-   * @returns {Promise<any>}
-   * @memberof AbstractRepository
-   */
-  public async paginate(findConditions: IFindConditions): Promise<any> {
-    const { page, limit, sort, sortBy, ...options } = findConditions;
-    const itemsPerPage: number = await this.computeItemsPerPage(Number(limit), Number(page));
-    const [data, total] = await this.getRepository().findAndCount({
-      ...options,
-      order: { [sortBy as string || 'firstName']: sort ? sort.toString().toUpperCase() : '' },
-      skip: itemsPerPage  * ( Number(page) - 1 ),
-      take: itemsPerPage
-    });
-
-    return { 
-      data, 
-      pagination: {
-        itemsPerPage,
-        totalItems: total,
-        currentPage: Number(page) || 1,
-        totalPage: Math.ceil(total/itemsPerPage ),
-      }
-    }
-  }
-
-  /**
-   * 
+   * @description Computes pagination data
    *
    * @private
    * @param {number} limit
@@ -110,18 +93,37 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @returns {Promise<number>}
    * @memberof AbstractRepository
    */
-  private async computeItemsPerPage (limit: number, page: number): Promise<number> {
+  public async computePaginationData (limit: number, page: number): Promise<IPaginationData> {
     const { minItemsPerPage, maxItemsPerPage } = configs.api.pagination;
+    let message!: string;
 
     if (limit < minItemsPerPage) {
-      throw this.rejectionError(this.getMessage('error.pagination.minItems', minItemsPerPage.toString()));
+      message = this.getMessage('error.pagination.minItems', `${minItemsPerPage}`);
     } else if (limit > maxItemsPerPage) {
-      throw this.rejectionError(this.getMessage('error.pagination.maxItems', maxItemsPerPage.toString()));
+      message = this.getMessage('error.pagination.maxItems', `${maxItemsPerPage}`);
     } else if (page <= 0) {
-      throw this.rejectionError(this.getMessage('error.pagination.page'));
+      message = this.getMessage('error.pagination.page');
     }
 
-    return Number(limit || minItemsPerPage);
+    if (message) {
+      throw this.rejectionError(message);
+    }
+
+    const itemsPerPage: number = limit || minItemsPerPage;
+    return {
+      itemsPerPage,
+      currentPage: page || 1,
+      skip: itemsPerPage  * (( page || 1 ) - 1 )
+    };
+  }
+
+  public getPaginationData (total: number, itemsPerPage: number, currentPage: number) {
+    return {
+      currentPage,
+      itemsPerPage,
+      totalItems: total,
+      totalPage: Math.ceil(total/itemsPerPage ),       
+    }
   }
 
   /**
@@ -180,6 +182,14 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   }
 
   /**
+   * @description Gets the search client instance
+   *
+   * @returns {SearchClient} an instance of the search client
+   * @memberof AbstractRepository
+   */
+  public abstract getSearchClient (): SearchClient<T>;
+
+  /**
    * @description Gets an instance of the entity's repository interface
    * Subclass should override this method to return
    *
@@ -197,6 +207,36 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    */
   public getSelectables(): Array<string> {
     return this.selectables;
+  }
+
+  /**
+   * @description Paginate response data
+   *
+   * @param {IPaginate} options
+   * @returns {Promise<any>}
+   * @memberof AbstractRepository
+   */
+  public async paginate(findConditions: IFindConditions): Promise<any> {
+    let { page, limit, sort, sortBy, ...options } = findConditions;
+    const order = sort ? (sort as string).split(':') : [];
+
+    const { 
+      skip, 
+      itemsPerPage, 
+      currentPage 
+    } = await this.computePaginationData(Number(limit), Number(page));
+    
+    const [data, total] = await this.getRepository().findAndCount({
+      ...options,
+      skip,
+      order: { [order[0]]: order[1].toUpperCase() },
+      take: itemsPerPage
+    });
+
+    return { 
+      data, 
+      pagination: this.getPaginationData(total, itemsPerPage, currentPage)
+    }
   }
 
   /**
