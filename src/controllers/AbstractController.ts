@@ -4,11 +4,13 @@ import { Request, Response, response } from 'express';
 import configs from '../configs';
 import constants from '../constants';
 import UtilityService from '../services/utilities/UtilityService';
-import HTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
+import HTTPResponseOptions from '../interfaces/HTTPResponseOptions';
 import RespositoryService from '../services/repositories/AbstractRepository';
 import isEmpty from 'lodash.isempty';
-import IHTTPResponseOptions from '../interfaces/IHTTPResponseOptions';
+import IHTTPResponseOptions from '../interfaces/HTTPResponseOptions';
 import { isUndefined } from 'util';
+import ISearch from '../interfaces/Search';
+import { ApiResponse } from '@elastic/elasticsearch';
 
 const { status } = constants;
 export default abstract class AbstractController<T>  extends UtilityService {
@@ -59,6 +61,15 @@ export default abstract class AbstractController<T>  extends UtilityService {
   protected readonly CONFLICT: number = status.CONFLICT;
 
   /**
+   * @description The authenticated user
+   *
+   * @protected
+   * @type {T}
+   * @memberof AbstractController
+   */
+  protected authUser!: T;
+
+  /**
    * @description Status code for an unauthorized request
    *
    * @protected
@@ -67,7 +78,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    */
   protected readonly UNAUTHORIZED: number = status.UNAUTHORIZED;
 
-  constructor() {
+  protected constructor() {
     super();
   }
   
@@ -80,6 +91,28 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @memberof AbstractController
    */
   protected abstract getRepository (): RespositoryService<T>;
+
+  /**
+   * @description Gets the authenticated user
+   *
+   * @protected
+   * @returns {T}
+   * @memberof AbstractController
+   */
+  protected getAuthUser (): T {
+    return this.authUser;
+  }
+
+  /**
+   * @description Sets the authenticated user
+   *
+   * @protected
+   * @param {T} user
+   * @memberof AbstractController
+   */
+  protected setAuthUser (user: T) {
+    this.authUser = user;
+  }
 
   /**
    * @description Runs a callback function asynchronously
@@ -125,27 +158,27 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @returns {object}
    * @memberof AbstractController
    */
-  protected getResponseData (data: object, message?: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
-    const { token, pagination, ...details } = data as any;
+  protected getResponseData (data: {[key: string]: any | string }, message?: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
+    const { token, pagination } = data;
 
-    if (isEmpty(data)) {
-      return { status, message };
-    } else {
-      const entity = isUndefined(pagination) ? details : details.data;
+    if (!isEmpty(data)) {
+      const entity = isUndefined(pagination) ? data : data.data;
 
       let response: {[key: string]: string | number | object } = { 
         status,
         data: {
-          [this.getResponseDataKey(entity)]: entity,
-          token
+          [this.getResponseDataKey(entity)]: entity, token
         }
       };
       response = message ? { ...response, message } : response;
 
-      return Array.isArray(entity) && !isEmpty(entity)
+      // If response is an array, apply the pagination meta data
+      return Array.isArray(entity)
         ? { ...response, meta: { pagination } }
         : response;
-    }
+    } 
+      
+    return { status, message };
   }
 
   /**

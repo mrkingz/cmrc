@@ -33,7 +33,7 @@ const configs = {
     lang: 'en',
     apiURL: 'https://cmrc.herokuapp.com',
     pagination: {
-      minItemsPerPage: 20,
+      minItemsPerPage: 10,
       maxItemsPerPage: 100
     }
   },
@@ -67,6 +67,14 @@ const configs = {
             : `${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}`;
 
           return databaseURL;
+      }
+    },
+
+    elasticSearch: {
+      node: 'http://localhost:9200',
+      credentials: {
+        username: process.env.ELASTIC_SEARCH_USERNAME,
+        password: process.env.ELASTIC_SEARCH_PASSWORD
       }
     }
   }

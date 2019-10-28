@@ -3,7 +3,7 @@ import MailGenerator, { ContentBody } from 'mailgen';
 import configs from '../../configs'
 import { 
   IMailOptions,
-} from '../../interfaces/INotification';
+} from '../../interfaces/Notification';
 
 sendGrid.setApiKey(configs.app.sendGridKey as string);
 

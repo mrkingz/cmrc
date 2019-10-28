@@ -1,9 +1,11 @@
-import { getRepository, FindConditions } from 'typeorm';
-import { IUser, UpdateOptions } from '../../interfaces/IEntity';
-import AbstractRepository from './AbstractRepository';
-import { supportsReportingObserver } from '@sentry/utils';
+import { getRepository } from 'typeorm';
 
-export default class UserRepository extends AbstractRepository<IUser> {
+import ISearch from '../../interfaces/Search';
+import { IUser } from '../../interfaces/User';
+import SearchClient from '../search/SearchClient';
+import AbstractRepository from './AbstractRepository';
+
+export default class UserRepository extends AbstractRepository<IUser> implements ISearch<IUser> {
 
   /**
    * @description A singleton of UserRepository.
@@ -39,18 +41,17 @@ export default class UserRepository extends AbstractRepository<IUser> {
   ]; 
 
   /**
-   * @description Creates an singleton singleton of UserRepository.
+   * @description Creates a singleton of UserRepository.
    * 
    * @memberof UserRepository
    */
   constructor () {
     super('User');
 
-    UserRepository.singleton = !!UserRepository.singleton
+    return !!UserRepository.singleton
       ? UserRepository.singleton
       : this;
     
-    return UserRepository.singleton;
   }
 
   /**
@@ -72,6 +73,16 @@ export default class UserRepository extends AbstractRepository<IUser> {
    * @memberof UserRepository
    */
   public create (fields: IUser): IUser {
-    return getRepository(this.getEntityName()).create(fields) as IUser  ;
+    return this.getRepository().create(fields) as IUser;
+  }
+
+  /**
+   * @description Overrides the getSearchClient ISearch interface
+   *
+   * @returns {SearchClient<IUser>}
+   * @memberof UserRepository
+   */
+  public getSearchClient (): SearchClient<IUser> {
+    return new SearchClient<IUser>(this);
   }
 }

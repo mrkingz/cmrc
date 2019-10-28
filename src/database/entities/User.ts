@@ -1,8 +1,4 @@
-import {
-  Entity, 
-  Column,
-  BeforeInsert
-} from 'typeorm';
+import { Entity, Column } from 'typeorm';
 import AbstractEntity from './AbsrtactEntity';
 import { IsEmail, MinLength, MaxLength, IsDefined, IsNotEmpty, ValidateIf } from 'class-validator';
 
@@ -52,13 +48,6 @@ export default class User extends AbstractEntity {
   @Column({ type: 'boolean', default: false })
   isAdmin!: boolean;
 
-
   @Column({ type: 'boolean', default: false })
   isVerified!: boolean;
-
-  // Before insert subscriber
-  @BeforeInsert()
-  beforeInsert() {
-    this.email = this.email.toLowerCase();
-  }
 };
