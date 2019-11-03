@@ -1,5 +1,6 @@
-import express, { Router} from 'express';
+import express, { Router, Request, Response, NextFunction} from 'express';
 import userController from '../controllers/UserController';
+
 
 const userRoutes: Router = express.Router();
 
@@ -25,4 +26,16 @@ userRoutes.get('/:userId', userController.getProfile());
  */
 userRoutes.post('/search', userController.authorizeUser(), userController.searchUsers());
 
+/**
+ * Routes to upload a profile photo
+ */
+userRoutes.put('/uploadPhoto', 
+  userController.uploadFileToStorage('image'),
+  userController.updateProfilePhotoURL()
+)
+
+/**
+ * Routes to remove profile photo
+ */
+userRoutes.delete('/removePhoto', userController.removePhoto())
 export default userRoutes;

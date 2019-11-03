@@ -25,6 +25,7 @@ export default {
   error: {
     notFound: `:value not found`,
     required: `:value is required`,
+    empty: `:value cannot be empty`,
     verified: `:value link has already been used`,
     server: `Internal error occured, try again later!`,
     conflict: 'Email address has been used',
@@ -47,6 +48,10 @@ export default {
       page: `Page number cannot be less than 1`,
       minItems: `Paginated items per page cannot be less than :value`,
       maxItems: `Paginated items per page cannot be greater than :value`
+    },
+    file: {
+      required: `No :value was uploaded`,
+      invalid: `File format must be one of :value`
     }
   },
   
@@ -66,6 +71,9 @@ export default {
     updated: `:value successfully updated`,
     deleted: `:value successfully deleted`,
     retrieved: `:value successfully retrieved`,
-    emptyList: `:value list is currently empty`
+    emptyList: `:value list is currently empty`,
+    file: {
+      removed: `:value successfully removed`,
+    }
   }
 }

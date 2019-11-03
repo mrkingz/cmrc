@@ -1,16 +1,16 @@
 import { NextFunction } from 'connect';
-import { Request, Response, response } from 'express';
+import { isUndefined } from 'util';
+import isEmpty from 'lodash.isempty';
+import { Request, Response } from 'express';
 
 import configs from '../configs';
 import constants from '../constants';
 import UtilityService from '../services/utilities/UtilityService';
 import HTTPResponseOptions from '../interfaces/HTTPResponseOptions';
-import RespositoryService from '../services/repositories/AbstractRepository';
-import isEmpty from 'lodash.isempty';
 import IHTTPResponseOptions from '../interfaces/HTTPResponseOptions';
-import { isUndefined } from 'util';
-import ISearch from '../interfaces/Search';
-import { ApiResponse } from '@elastic/elasticsearch';
+import RespositoryService from '../services/repositories/AbstractRepository';
+import CustomError from '../services/utilities/CustomError';
+
 
 const { status } = constants;
 export default abstract class AbstractController<T>  extends UtilityService {
@@ -125,9 +125,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
   protected tryCatch (callback: Function) {
     return async (req: Request, res: Response, next: NextFunction): Promise<any> => {
       try {
-
         const response = await callback(req, res, next) as any;
-
         /**
          *  Sometimes we may want to delegate request to the next middleware 
          *  or even call a function that is returned by the call back
@@ -135,15 +133,9 @@ export default abstract class AbstractController<T>  extends UtilityService {
          */ 
         return (response.constructor === Function)
           ? response()
-          : this.statusResponse(req, res, response);
-
+          : this.httpResponse(req, res, response);
       } catch (error) {
-        return res.status(error.status || 500).json({ 
-          success: false,
-          error: req.app.settings.env === 'development' 
-            ? error.toString()
-            : this.getMessage('error.server')
-        });
+        return this.errorResponse(req, res, error);
       }
     }
   }
@@ -159,15 +151,16 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @memberof AbstractController
    */
   protected getResponseData (data: {[key: string]: any | string }, message?: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
-    const { token, pagination } = data;
+    const { token, pagination, ...details } = data;
 
     if (!isEmpty(data)) {
-      const entity = isUndefined(pagination) ? data : data.data;
+      const entity = isUndefined(pagination) ? details : details.data;
 
       let response: {[key: string]: string | number | object } = { 
         status,
         data: {
-          [this.getResponseDataKey(entity)]: entity, token
+          [this.getResponseDataKey(entity)]: entity, 
+          token
         }
       };
       response = message ? { ...response, message } : response;
@@ -215,7 +208,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @param {ResponseOptions<T>} options 
    * @returns void
    */
-  protected statusResponse (req: Request, res: Response, options: HTTPResponseOptions<T>): void {
+  protected httpResponse (req: Request, res: Response, options: HTTPResponseOptions<T>): void {
     let { keep, message, status, success, ...data } = options;
 
     //Todo: Do something with keep
@@ -225,6 +218,26 @@ export default abstract class AbstractController<T>  extends UtilityService {
       success: success || status < this.BAD_REQUEST,
       message,
       ...data
+    });
+  }
+
+  /**
+   *
+   *
+   * @param {Request} req
+   * @param {Response} res
+   * @param {CustomError} errors
+   * @returns
+   * @memberof AbstractController
+   */
+  errorResponse (req: Request, res: Response, errors: CustomError) {
+    const { error, status } = errors;
+    return res.status(status || 500).json({ 
+      success: false,
+      [error.constructor === String ? 'message' : 'errors' ]: 
+        req.app.settings.env === 'development' 
+          ? error
+          : this.getMessage('error.server')
     });
   }
 

@@ -13,10 +13,24 @@ const configs = {
     sentry: process.env.SENTRY,
     sendGridKey: process.env.SENDGRID_API_KEY,
     fromEmail: process.env.FROM_EMAIL,
+    /**
+     * Admin default credentials
+     */
     admin: {
       email: process.env.ADMIN_EMAIL,
       password: process.env.ADMIN_PASSWORD
     },
+    /**
+     * Cloudinary configs
+     */
+    cloudinaryConfig: {
+      api_key: process.env.CLOUD_API_KEY,
+      api_secret: process.env.CLOUD_API_SECRET,
+      cloud_name: process.env.CLOUD_NAME
+    },
+    /**
+     * JWT configs
+     */
     jwt: {
       issuer: process.env.ISSUER,
       secret: process.env.JWT_SECRET
@@ -69,7 +83,9 @@ const configs = {
           return databaseURL;
       }
     },
-
+    /**
+     * Elastic search configs
+     */
     elasticSearch: {
       node: 'http://localhost:9200',
       credentials: {
