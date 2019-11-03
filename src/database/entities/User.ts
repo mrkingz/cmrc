@@ -1,6 +1,6 @@
 import { Entity, Column } from 'typeorm';
 import AbstractEntity from './AbsrtactEntity';
-import { IsEmail, MinLength, MaxLength, IsDefined, IsNotEmpty, ValidateIf } from 'class-validator';
+import { IsEmail, MinLength, MaxLength, IsDefined, IsNotEmpty, IsUrl, ValidateIf } from 'class-validator';
 
 @Entity('users')
 export default class User extends AbstractEntity {
@@ -20,7 +20,7 @@ export default class User extends AbstractEntity {
   lastName!: string;
 
   @IsDefined({ message: '$property is required'})
-  @Column({ type: 'varchar', unique: false, length: 50 })
+  @Column({ type: 'varchar', unique: true, length: 50 })
   @IsEmail({}, { message: `Please, enter a valid email address` })
   email!: string;
 
@@ -30,11 +30,9 @@ export default class User extends AbstractEntity {
   @MaxLength(30, { message: `Password cannot be longer than $constraint1 characters` })
   password!: string
 
-  @ValidateIf(o => o.photo !== undefined)
   @Column({ type: 'varchar', nullable: true, unique: true, length: 20 })
   phoneNumber!: string
 
-  @ValidateIf(o => o.photo !== undefined)
   @Column({ type: 'varchar', nullable: true,  unique: true, length: 100 })
   photo!: string;
 

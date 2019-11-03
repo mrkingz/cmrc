@@ -8,7 +8,7 @@ export interface IUser {
   password?: string;
   isAdmin?: boolean;
   isVerified?: boolean;
-  photo?: string;
+  photo?: string | null;
   passwordReset?: boolean;
   rememberMeToken?: string;
   createdAt?: Date;

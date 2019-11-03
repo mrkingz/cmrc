@@ -1,18 +1,19 @@
 import { Not } from 'typeorm';
 import isEmpty from 'lodash.isempty';
 import sendGrid from '@sendgrid/mail';
-import { Request, RequestHandler } from 'express';
+import { Request, Response, RequestHandler, NextFunction, ErrorRequestHandler } from 'express';
 
 import configs from '../configs'
-import ISearch from '../interfaces/Search';
 import { IUser } from '../interfaces/User';
 import AuthController from './AuthController';
+import IFileUploader from '../interfaces/FileUploader';
+import Fileservice from '../services/upload/FileService';
 import UserRepository from '../services/repositories/UserRepository';
 import NotificationService from '../services/notifications/NotificationService';
 
 sendGrid.setApiKey(configs.app.sendGridKey as string)
 
-class UserController extends AuthController {
+class UserController extends AuthController implements IFileUploader {
 
   /**
    * @description A singleton of UserController.
@@ -43,7 +44,7 @@ class UserController extends AuthController {
   /**
    * @description Gets all registered users
    *
-   * @returns
+   * @returns {RequestHandler}
    * @memberof UserController
    */
   public getUsers (): RequestHandler {
@@ -102,6 +103,27 @@ class UserController extends AuthController {
   }
 
   /**
+   * @description Removes an uploaded profile photo
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public removePhoto (): RequestHandler {
+    return this.tryCatch(async (req: Request) => {
+      const user: IUser = await this.getRepository().update(
+        { id: this.getAuthUser().id }, { photo: null }
+      );
+      
+      await this.getFileUploader().deleteFile(this.getAuthUser().email as string);
+
+      return this.getResponseData(
+        this.removePasswordFromUserData(user), 
+        this.getMessage('entity.file.removed', 'Profile photo')
+      );
+    });
+  }
+
+  /**
    * @description Search users by first or last name
    *
    * @returns {RequestHandler}
@@ -110,12 +132,13 @@ class UserController extends AuthController {
   public searchUsers (): RequestHandler {
     return this.tryCatch(async (req: Request): Promise<object> => {
       const {page, limit, sort } = req.query;
-      const sortArray = sort ? sort.split(':') : []
+      const sortArray = sort ? sort.split(':') : [];
+
       const data = await this.getRepository().getSearchClient().searchIndex({
         multi_match: {
           query: req.body.name,
           type: 'phrase_prefix',
-          fields: ['firstName', 'lastName']
+          fields: ['firstName', 'lastName'] // search both fields
         }
       }, {
         limit, page, sort: sort ? [{
@@ -130,7 +153,7 @@ class UserController extends AuthController {
   /**
    * @description Sign up a new user
    * 
-   * @returns {Function}
+   * @returns {RequestHandler}
    * @memberof AuthController
    */
   public signUp (): RequestHandler {
@@ -161,7 +184,7 @@ class UserController extends AuthController {
   /**
    * @description Updates password
    *
-   * @returns {Function}
+   * @returns {RequestHandler}
    * @memberof UserController
    */
   public updatePassword (): RequestHandler {
@@ -178,11 +201,12 @@ class UserController extends AuthController {
         { passwordReset: false, password: this.hashPassword(password as string) },
         this.getMessage(`error.${this.PASSWORD}.invalid`),
         /*
-         * Callback to check if user actually enters a different password
-         * The callback throws an error if they match
+         * Callback to check if: 
+         * - link has already been used
+         * - user entered a new password tht is different from the old password
          */ 
         async (user: IUser) => {
-          if (user.passwordReset) { // false, if link has already been used
+          if (user.passwordReset) { // true, if link has already been used
             throw this.rejectionError(this.getMessage(`error.${this.PASSWORD}.used`), this.UNAUTHORIZED)
           } else if (this.confirmPassword(password, user.password as string, 
               this.getMessage(`error.required`, this.PASSWORD))) {
@@ -196,6 +220,56 @@ class UserController extends AuthController {
         this.getMessage('entity.updated', this.capitalizeFirst(this.PASSWORD))
       )
     });
+  }
+
+  /**
+   * @description Overrides uploadFileToStorage of IFileUploader
+   * 
+   * @param {string} fileType the file type
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public uploadFileToStorage (fileType: string): RequestHandler {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      const uploader: RequestHandler = await this.getFileUploader().uploadFile(
+        this.getAuthUser().email as string, fileType
+      ).single('photo');
+
+      uploader(req, res, (error: Error) => {
+        if (!req.file && !error) {
+          return this.httpResponse(req, res, { 
+            message: this.getMessage('error.file.required', 'photo'), 
+            status: this.BAD_REQUEST 
+          })
+        }
+
+        return error
+          ? this.httpResponse(req, res, { 
+              message: error.toString(), status: this.BAD_REQUEST 
+            })
+          : next();
+      });
+    };
+  }
+
+  /**
+   * @description Saves an uploaded file URL
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public updateProfilePhotoURL (): RequestHandler {
+    return this.tryCatch(async (req: Request) => {
+      const file: {[key:string]: any} = req.file;
+      const user: IUser = await this.getRepository().update(
+        { id: this.getAuthUser().id }, { photo: decodeURIComponent(file.secure_url)}
+      );
+
+      return this.getResponseData(
+        this.removePasswordFromUserData(user), 
+        this.getMessage('entity.updated', 'Profile photo')
+      );
+    })
   }
 
   /**
@@ -226,6 +300,16 @@ class UserController extends AuthController {
         this.getMessage('entity.updated', 'Profile')
       );
     });
+  }
+
+  /**
+   * @description Overrides getFileUploader of IFileUploader
+   *
+   * @returns {Fileservice}
+   * @memberof UserController
+   */
+  public getFileUploader (): Fileservice {
+    return new Fileservice();
   }
 }
 

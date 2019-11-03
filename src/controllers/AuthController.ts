@@ -92,7 +92,7 @@ export default abstract class AuthController extends AbstractController<IUser> {
       const { id } = this.decodeJWT(this.extractToken(req), {}, this.AUTHENTICATION);
 
       const user: IUser = await this.getRepository().findOneOrFail({ id } as {}); 
-      this.setAuthUser(user);
+      this.setAuthUser(this.removePasswordFromUserData(user) as IUser);
 
       return next;
     });
@@ -119,7 +119,7 @@ export default abstract class AuthController extends AbstractController<IUser> {
    *
    * @private
    * @param {Request} req the HTTP request object
-   * @returns {string} the extected token
+   * @returns {string} the extracted token
    * @memberof AuthController
    */
   private extractToken (req: Request): string {
@@ -215,7 +215,7 @@ export default abstract class AuthController extends AbstractController<IUser> {
    */
   public checkIfUniqueEmail (): RequestHandler {
     return this.tryCatch(async (req: Request, res: Response, next: NextFunction): Promise<object> => {
-      const email: string = req.body.email.toLowerCase();
+      const email: string = req.body.email ? req.body.email.toLowerCase() : '';
       const data = await this.getRepository().findOne({ email } as FindOneOptions<IUser>);
       if (isEmpty(data)) {
         req.body.email = email
