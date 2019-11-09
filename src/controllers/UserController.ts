@@ -1,44 +1,115 @@
-import { Not } from 'typeorm';
-import isEmpty from 'lodash.isempty';
-import sendGrid from '@sendgrid/mail';
-import { Request, Response, RequestHandler, NextFunction, ErrorRequestHandler } from 'express';
 
-import configs from '../configs'
-import { IUser } from '../interfaces/User';
-import AuthController from './AuthController';
-import IFileUploader from '../interfaces/FileUploader';
-import Fileservice from '../services/upload/FileService';
-import UserRepository from '../services/repositories/UserRepository';
-import NotificationService from '../services/notifications/NotificationService';
+import { isEmpty } from 'lodash';
+import {Request, RequestHandler, NextFunction, Response} from 'express';
 
-sendGrid.setApiKey(configs.app.sendGridKey as string)
+import { IUser } from '../types/User';
+import UserService from "../services/UserService";
+import ResponseData from "src/types/ResponseData";
+import { Pagination } from "../types/Pangination";
+import IResponseData from 'src/types/ResponseData';
+import AbstractService from "../services/AbstractService";
+import UserRepository from '../repositories/UserRepository';
+import ValidationController from "./ValidationController";
 
-class UserController extends AuthController implements IFileUploader {
+class UserController extends ValidationController<IUser> {
 
-  /**
-   * @description A singleton of UserController.
-   *
-   * @private
-   * @static
-   * @type {UserController}
-   * @memberof UserController
-   */
-  private static singleton: UserController;
+  protected readonly VERIFICATION: string = 'verification';
+  protected readonly PASSWORD: string = 'password';
+  protected readonly AUTHENTICATION: string = 'authentication';
 
   /**
-   * @description Creates a singleton of UserController.
+   * Creates a singleton instance of UserController.
    * 
-   * @param {NotificationService} notifier the notification service instance
    * @param {UserRepository} repository the repository service instane
    * @memberof UserController
    */
-  constructor(notifier: NotificationService, repository: UserRepository) {
-    super(notifier, repository);
+  public constructor(service: AbstractService<IUser>) {
+    super(service);
+  }
 
-    // We force the constructor to always return a singleton
-    return !!UserController.singleton
-      ? UserController.singleton
-      : this;   
+  /**
+   * Verifies registration
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public accountVerification (): RequestHandler {
+    return this.tryCatch(async (req: Request): Promise<ResponseData<IUser>> => {
+      const user = await (this.getServiceInstance() as UserService).accountVerification(req.params.token)
+
+      return this.getResponseData(user, this.getMessage('email.verified'));
+    });
+  }
+
+  /**
+   * Authenticate user with email and password
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public authenticateUser (): RequestHandler {
+    return this.tryCatch(async (req: Request, res: Response, next: NextFunction): Promise<NextFunction> => {
+
+      const user: IUser = await (this.getServiceInstance() as UserService).checkAuthentication(this.extractToken(req));
+      this.setAuthUser(user);
+
+      return next;
+    });
+  }
+
+  /**
+   * Guard to check user authorization/privilege level
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public authorizeUser (): RequestHandler {
+    return this.tryCatch(async (req: Request, res: Response, next: NextFunction):  Promise<NextFunction> => {
+      if (this.getAuthUser().isAdmin) {
+        return next;
+      }
+
+      throw this.error(this.getMessage('error.unauthorized'), this.httpStatus.UNAUTHORIZED);
+    });
+  }
+
+  /**
+   * Extracts the authentication token associated with the request
+   *
+   * @private
+   * @param {Request} req the HTTP request object
+   * @returns {string} the extracted token
+   * @memberof UserController
+   */
+  private extractToken (req: Request): string {
+    let token = req.headers['x-access-token']
+      || req.headers['authorization']
+      || req.cookies['x-access-token'] 
+      || req.query['x-access-token'] 
+      || req.body['x-access-token'];
+
+    if (token) {
+      const match = new RegExp('^Bearer').exec(token);
+      token = match ? token.split(' ')[1] : token;
+      return token.trim();
+    }
+
+    throw this.error(this.getMessage('authentication.token.notFound'), this.httpStatus.UNAUTHORIZED);
+  }
+
+  /**
+   * Gets user profile details
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public getUser (): RequestHandler {
+    return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
+      const { params: { userId }} = req;
+      const user: IUser = await (this.getServiceInstance() as UserService).getUser(userId, this.getAuthUser());
+
+      return this.getResponseData(user, this.getMessage('entity.retrieved', 'Profile'));
+    });
   }
 
   /**
@@ -48,272 +119,179 @@ class UserController extends AuthController implements IFileUploader {
    * @memberof UserController
    */
   public getUsers (): RequestHandler {
-    return this.tryCatch(async (req: Request) => {
-      // If status is defined in the query object, 
-      // then filter users base on their account status; i.e., verified/unverified
-      const status = req.query.status ? { isVerified: req.query.status } : {};
+    return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
+      const { query: { page, limit, sort, status }} = req;
 
-      const users = await this.getRepository().paginate({ 
-        select: this.getRepository().getSelectables(),
-        where: { id: Not(this.getAuthUser().id), ...status },
-        page: req.query.page,
-        limit: req.query.limit,
-        sort: req.query.sort
+      const users: Pagination<IUser> = await (this.getServiceInstance() as UserService).getUsers({
+        page, limit, sort, status
       });
 
-      return this.getResponseData(users, 
+      return this.getResponseData(users,
         this.getMessage(isEmpty(users.data) ? `entity.emptyList` : `entity.retrieved`, `Users`)
       );
     });
   }
 
   /**
-   * @description Gets user profile details
-   *
-   * @returns {RequestHandler}
-   * @memberof UserController
-   */
-  public getProfile (): RequestHandler {
-    return this.tryCatch(async (req: Request) => {
-      let user: IUser;
-      
-      /*
-       * If user is the authenticated user
-       * then, id from params must match the id of the authenticated user
-       */ 
-      if (this.getAuthUser().id === req.params.userId) {
-        user = this.getAuthUser();
-      } 
-      /*
-       * If id from params does not match,
-       * Check if user is admin, as only admin can view other user's profile
-       * Otherwise, throw an unauthorized message
-       */
-      else if (this.getAuthUser().isAdmin) {
-        user = await this.getRepository().findOneOrFail({ id: req.params.userId } as {});
-      } else {
-        throw this.rejectionError(this.getMessage('error.unauthorized'), this.UNAUTHORIZED);
-      }
-
-      return this.getResponseData(
-        this.removePasswordFromUserData(user),
-        this.getMessage('entity.retrieved', 'Prifile')
-      );
-    });
-  }
-
-  /**
-   * @description Removes an uploaded profile photo
-   *
-   * @returns {RequestHandler}
-   * @memberof UserController
-   */
-  public removePhoto (): RequestHandler {
-    return this.tryCatch(async (req: Request) => {
-      const user: IUser = await this.getRepository().update(
-        { id: this.getAuthUser().id }, { photo: null }
-      );
-      
-      await this.getFileUploader().deleteFile(this.getAuthUser().email as string);
-
-      return this.getResponseData(
-        this.removePasswordFromUserData(user), 
-        this.getMessage('entity.file.removed', 'Profile photo')
-      );
-    });
-  }
-
-  /**
-   * @description Search users by first or last name
+   * Search users by first or last name
    *
    * @returns {RequestHandler}
    * @memberof UserController
    */
   public searchUsers (): RequestHandler {
-    return this.tryCatch(async (req: Request): Promise<object> => {
-      const {page, limit, sort } = req.query;
-      const sortArray = sort ? sort.split(':') : [];
+    return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
+      const { page, limit, sort } = req.query;
 
-      const data = await this.getRepository().getSearchClient().searchIndex({
-        multi_match: {
-          query: req.body.name,
-          type: 'phrase_prefix',
-          fields: ['firstName', 'lastName'] // search both fields
-        }
-      }, {
-        limit, page, sort: sort ? [{
-          [`${sortArray[0]}.keyword`]: { order: `${sortArray[1]}`}
-        }] : [],
-      });
+      const data: Pagination<IUser> = await (this.getServiceInstance() as UserService).search({
+        query: req.query.name,
+        fields: ['firstName', 'lastName']
+      }, { page, limit, sort });
 
       return this.getResponseData(data);
     });
   }
 
   /**
-   * @description Sign up a new user
+   * Sends a password reset email
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public sendPasswordResetLink (): RequestHandler {
+    return this.tryCatch(async (req: Request): Promise<object> => {
+      this.getServiceInstance().setBaseUrl(this.getBaseUrl(req));
+      const { body: { email }} = req;
+
+      await (this.getServiceInstance() as UserService).sendPasswordResetLink(email);
+      return this.getResponseData({}, this.getMessage(`email.${this.PASSWORD}.message`));
+    });
+  }
+
+  /**
+   * Sign in a registered user
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public signIn (): RequestHandler {
+    return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
+      const { body: { email, password } } = req;
+
+      const { token, message } = await (this.getServiceInstance() as UserService).authentication({ email, password });
+
+      return isEmpty(token)
+        ? this.getResponseData({}, message, this.httpStatus.UNAUTHORIZED)
+        : this.getResponseData({ token: token as string }, message);
+    });
+  }
+
+  /**
+   * Sign up a new user
    * 
    * @returns {RequestHandler}
-   * @memberof AuthController
+   * @memberof UserController
    */
   public signUp (): RequestHandler {
-    return this.tryCatch(async (req: Request): Promise<object> => {
-      this.setBaseURL(req);
-      await this.getRepository().validator(req.body);
-
-      const user: IUser = await this.getRepository().save({
-        ...req.body,
-        password: this.hashPassword(req.body.password) 
-      });
-
-      // Create search index, so users can be searched by names
-      await this.getRepository().getSearchClient().createIndex({ 
-        id: user.id, firstName: user.firstName, lastName: user.lastName 
-      });
- 
-      this.sendEmailNotification(user, this.VERIFICATION);
+    return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
+      this.getServiceInstance().setBaseUrl(this.getBaseUrl(req));
+      const user: IUser = await this.getServiceInstance().create(req.body);
 
       return this.getResponseData(
-        this.removePasswordFromUserData(user), 
-        this.getMessage(`email.${this.VERIFICATION}.message`), 
-        this.CREATED
+        user, this.getMessage(`email.${this.VERIFICATION}.message`), this.httpStatus.CREATED
       );
     });
   }
 
   /**
-   * @description Updates password
+   * Updates password
    *
    * @returns {RequestHandler}
    * @memberof UserController
    */
   public updatePassword (): RequestHandler {
-    return this.tryCatch(async (req: Request) => {
-      const { password } = req.body;
-      const { id } = await this.validateToken(req.params.token, this.PASSWORD);
+    return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
+      const { body: { password }, params: { token }} = req;
+      await (this.getServiceInstance() as UserService).updatePassword(token, password);
 
-      await this.getRepository().validator({ password }, { 
-        skip: ['firstName', 'lastName', 'email'], // Skip these fields during validation
-      });
-
-      const updatedUser = await this.getRepository().update(
-        { id }, 
-        { passwordReset: false, password: this.hashPassword(password as string) },
-        this.getMessage(`error.${this.PASSWORD}.invalid`),
-        /*
-         * Callback to check if: 
-         * - link has already been used
-         * - user entered a new password tht is different from the old password
-         */ 
-        async (user: IUser) => {
-          if (user.passwordReset) { // true, if link has already been used
-            throw this.rejectionError(this.getMessage(`error.${this.PASSWORD}.used`), this.UNAUTHORIZED)
-          } else if (this.confirmPassword(password, user.password as string, 
-              this.getMessage(`error.required`, this.PASSWORD))) {
-            throw this.rejectionError(this.getMessage(`error.${this.PASSWORD}.same`), this.UNAUTHORIZED);
-          }
-        }
-      );
-
-      return this.getResponseData(
-        this.removePasswordFromUserData(updatedUser),
-        this.getMessage('entity.updated', this.capitalizeFirst(this.PASSWORD))
-      )
+      return this.getResponseData({}, this.getMessage('entity.updated', `Password`));
     });
   }
 
   /**
-   * @description Overrides uploadFileToStorage of IFileUploader
-   * 
+   * Update profile details
+   *
+   * @returns {Function}
+   * @memberof UserController
+   */
+  public updateProfile (): RequestHandler {
+    return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
+      const { body : { email, password, ...updates }} = req;
+      const updated: IUser = await this.getServiceInstance().update(this.getAuthUser(), updates);
+
+      return this.getResponseData(
+        { ...this.getAuthUser(), ...updated }, this.getMessage('entity.updated', 'Profile'));
+    });
+  }
+
+  /**
+   * Removes an uploaded profile photo
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public removePhoto (): RequestHandler {
+    return this.tryCatch(async (): Promise<IResponseData<IUser>> => {
+      const updatedUser: IUser = await (this.getServiceInstance() as UserService).removePhoto(this.getAuthUser());
+
+      return this.getResponseData(updatedUser,
+        this.getMessage('entity.file.removed', 'Profile photo'));
+    });
+  }
+
+  /**
+   * Overrides uploadFileToStorage of IFileUploader
+   *
    * @param {string} fileType the file type
    * @returns {RequestHandler}
    * @memberof UserController
    */
   public uploadFileToStorage (fileType: string): RequestHandler {
-    return async (req: Request, res: Response, next: NextFunction) => {
-      const uploader: RequestHandler = await this.getFileUploader().uploadFile(
-        this.getAuthUser().email as string, fileType
-      ).single('photo');
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      const uploader: RequestHandler = await (this.getServiceInstance() as UserService).uploadFile(this.getAuthUser(), fileType);
 
       uploader(req, res, (error: Error) => {
-        if (!req.file && !error) {
-          return this.httpResponse(req, res, { 
-            message: this.getMessage('error.file.required', 'photo'), 
-            status: this.BAD_REQUEST 
-          })
-        }
+        let message!: string;
 
-        return error
-          ? this.httpResponse(req, res, { 
-              message: error.toString(), status: this.BAD_REQUEST 
-            })
+        if (!req.file && !error)
+          message = this.getMessage('error.file.required', 'photo');
+        else if (error)
+          message = error.toString();
+
+        return message
+          ? this.httpResponse(res, { message, status: this.httpStatus.BAD_REQUEST })
           : next();
       });
     };
   }
 
   /**
-   * @description Saves an uploaded file URL
+   * Saves an uploaded file URL
    *
    * @returns {RequestHandler}
    * @memberof UserController
    */
-  public updateProfilePhotoURL (): RequestHandler {
-    return this.tryCatch(async (req: Request) => {
-      const file: {[key:string]: any} = req.file;
-      const user: IUser = await this.getRepository().update(
+  public updatePhotoURL (): RequestHandler {
+    return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
+      const file: {[key: string]: any } = req.file;
+      const updatedUser: IUser = await this.getServiceInstance().update(
         { id: this.getAuthUser().id }, { photo: decodeURIComponent(file.secure_url)}
       );
 
       return this.getResponseData(
-        this.removePasswordFromUserData(user), 
-        this.getMessage('entity.updated', 'Profile photo')
-      );
+        {...this.getAuthUser(), ...updatedUser },
+         this.getMessage('entity.updated', 'Profile photo'));
     })
-  }
-
-  /**
-   * @description Update profile details
-   *
-   * @returns {Function}
-   * @memberof UserController
-   */
-  public updateProfile (): RequestHandler {
-    return this.tryCatch(async (req: Request) => {
-      // prevent updating email and password
-      const { email, password, ...details } = req.body;
-
-      let updates: { [key: string]: string} = {};
-      Object.keys(details).forEach(key => { updates[key] = details[key]; });
-      
-      updates = await this.getRepository().validator(updates, {
-        // skip other fillable fields that are not being updated
-        skip: this.getRepository().getFillables().filter((field: string) => {
-                return !Object.keys(updates).includes(field as string) 
-              })
-      }) as {};
-
-      const updated: IUser = await this.getRepository().update({ id: this.getAuthUser().id }, updates);
-
-      return this.getResponseData(
-        this.removePasswordFromUserData(updated), 
-        this.getMessage('entity.updated', 'Profile')
-      );
-    });
-  }
-
-  /**
-   * @description Overrides getFileUploader of IFileUploader
-   *
-   * @returns {Fileservice}
-   * @memberof UserController
-   */
-  public getFileUploader (): Fileservice {
-    return new Fileservice();
   }
 }
 
-export default new UserController(
-  new NotificationService(), 
-  new UserRepository()
-);
+export default new UserController(new UserService());

@@ -6,10 +6,15 @@ module.exports = {
     'plugin:prettier/recommended'
   ],
   parserOptions: {
-    ecmaVersion: 2018,
+    ecmaVersion: 6,
     sourceType: 'module'
   },
   rules: {
-    '@typescript-eslint/no-var-requires': 0
+    'prettier/prettier': 0,
+    '@typescript-eslint/no-inferrable-types': 0,
+    '@typescript-eslint/interface-name-prefix': 0,
+    '@typescript-eslint/camelcase': 0,
+    '@typescript-eslint/no-var-requires': 0,
+    '@typescript-eslint/explicit-function-return-type': 0
   }
 }

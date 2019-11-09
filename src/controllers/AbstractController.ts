@@ -1,272 +1,175 @@
-import { NextFunction } from 'connect';
-import { isUndefined } from 'util';
 import isEmpty from 'lodash.isempty';
-import { Request, Response } from 'express';
+import {NextFunction} from 'connect';
+import {Request, RequestHandler, Response} from 'express';
 
 import configs from '../configs';
 import constants from '../constants';
-import UtilityService from '../services/utilities/UtilityService';
-import HTTPResponseOptions from '../interfaces/HTTPResponseOptions';
-import IHTTPResponseOptions from '../interfaces/HTTPResponseOptions';
-import RespositoryService from '../services/repositories/AbstractRepository';
-import CustomError from '../services/utilities/CustomError';
+import CustomError from '../utilities/CustomError';
+import Utilities from '../utilities/Utilities';
+import IResponseData from '../types/ResponseData';
+import AbstractService from "../services/AbstractService";
+import {Pagination} from "../types/Pangination";
+import * as Sentry from '@sentry/node';
 
+const { httpStatus } = constants;
 
-const { status } = constants;
-export default abstract class AbstractController<T>  extends UtilityService {
+export default abstract class AbstractController<T>  extends Utilities {
 
-  /**
-   * @description the base URL of the application
-   *
-   * @protected
-   * @type {string}
-   * @memberof BaseController
-   */
-  protected baseURL!: string;
-
-  /**
-   * @description Status code for a newly created resource
-   *
-   * @protected
-   * @type {number}
-   * @memberof AbstractController
-   */
-  protected readonly CREATED: number = status.CREATED;
-
-  /**
-   * @description Status code for a successfull request
-   *
-   * @protected
-   * @type {number}
-   * @memberof AbstractController
-   */
-  protected readonly OKAY: number = status.OKAY
-
-  /**
-   * @description Status code for bad request
-   *
-   * @protected
-   * @type {number}
-   * @memberof AbstractController
-   */
-  protected readonly BAD_REQUEST: number = status.BAD_REQUEST;
-
-  /**
-   * @description Status code for a conflicting request
-   *
-   * @protected
-   * @type {number}
-   * @memberof AbstractController
-   */
-  protected readonly CONFLICT: number = status.CONFLICT;
-
-  /**
-   * @description The authenticated user
-   *
-   * @protected
-   * @type {T}
-   * @memberof AbstractController
-   */
+  protected baseUrl!: string;
   protected authUser!: T;
+  protected readonly httpStatus = httpStatus;
 
-  /**
-   * @description Status code for an unauthorized request
-   *
-   * @protected
-   * @type {number}
-   * @memberof AbstractController
-   */
-  protected readonly UNAUTHORIZED: number = status.UNAUTHORIZED;
+  protected readonly service: AbstractService<T>;
 
-  protected constructor() {
+  protected constructor(service: AbstractService<T>) {
     super();
+    this.service = service;
   }
-  
-  /**
-   * @description Gets the respository service instance
-   *
-   * @protected
-   * @abstract
-   * @returns {RespositoryService<T>}
-   * @memberof AbstractController
-   */
-  protected abstract getRepository (): RespositoryService<T>;
 
   /**
-   * @description Gets the authenticated user
+   * Handles error response
+   *
+   * @protected
+   * @param {Request} req
+   * @param {Response} res
+   * @param {CustomError} error
+   * @returns
+   * @memberof AbstractController<T>
+   */
+  protected errorResponse (res: Response, exception: CustomError) {
+    this.setAuthUser({} as T);
+    const { error, status } = exception
+    if (!status)
+      Sentry.captureException(exception);
+
+    return res.status(status || this.httpStatus.SERVER_ERROR).json({
+      success: false,
+      error: error || this.getMessage('error.server')
+    });
+  }
+
+  /**
+   * Gets the authenticated user
    *
    * @protected
    * @returns {T}
-   * @memberof AbstractController
+   * @memberof AbstractController<T>
    */
   protected getAuthUser (): T {
     return this.authUser;
   }
 
   /**
-   * @description Sets the authenticated user
-   *
-   * @protected
-   * @param {T} user
-   * @memberof AbstractController
-   */
-  protected setAuthUser (user: T) {
-    this.authUser = user;
-  }
-
-  /**
-   * @description Runs a callback function asynchronously
-   *
-   * @protected
-   * @param {Function} callback
-   * @returns {Promise<Function>} an asynchronous function
-   * @memberof BaseController
-   */
-  protected tryCatch (callback: Function) {
-    return async (req: Request, res: Response, next: NextFunction): Promise<any> => {
-      try {
-        const response = await callback(req, res, next) as any;
-        /**
-         *  Sometimes we may want to delegate request to the next middleware 
-         *  or even call a function that is returned by the call back
-         *  we check for the type of response received, and then use it accordingly
-         */ 
-        return (response.constructor === Function)
-          ? response()
-          : this.httpResponse(req, res, response);
-      } catch (error) {
-        return this.errorResponse(req, res, error);
-      }
-    }
-  }
-
-  /**
-   * @description Gets the response data, status and message
+   *Gets the response data, status and message
    *
    * @protected
    * @param {object} data
    * @param {string} message
-   * @param {number} [status=200]
-   * @returns {object}
-   * @memberof AbstractController
+   * @param {number} the status code
+   * @returns IResponseData<T>
+   * @memberof AbstractController<T>
    */
-  protected getResponseData (data: {[key: string]: any | string }, message?: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
-    const { token, pagination, ...details } = data;
+  protected getResponseData (data: T | Pagination<T>, message?: string, status?: number): IResponseData<T> {
+    const { pagination, ...details } = data as Pagination<T>;
 
     if (!isEmpty(data)) {
-      const entity = isUndefined(pagination) ? details : details.data;
-
+      const entity = pagination ? details.data : details;
       let response: {[key: string]: string | number | object } = { 
-        status,
-        data: {
-          [this.getResponseDataKey(entity)]: entity, 
-          token
-        }
+        status: status || this.httpStatus.OKAY,
       };
       response = message ? { ...response, message } : response;
 
-      // If response is an array, apply the pagination meta data
-      return Array.isArray(entity)
-        ? { ...response, meta: { pagination } }
-        : response;
+      if (Array.isArray(entity)) {
+        response.data = isEmpty(entity) ? [] : entity as Array<T>;
+        return isEmpty(entity) ? response : { ...response, meta: { pagination } }
+      } else {
+        response.data = entity;
+        return response;
+      }
     } 
       
     return { status, message };
   }
 
   /**
-   * @description Gets the corresponding key the data will be mapped to
-   * 
-   * @param {Object | Array<any>} data 
-   * @returns object
+   * Gets an instance of AbstractService<T>
+   *
+   * @returns an instance of AbstractService<T>
    */
-  private getResponseDataKey (data: T | Array<any>): string {
-    let key = this.getRepository().getEntityName().toLowerCase();
-    /**
-     * Check if data is an array
-     * We would pluralize it accordingly
-     */ 
-    if (Array.isArray(data)) {
-      /**
-       * If the name of the entity ends with 'y',
-       * pluralize the key using 'ies'; otherwise, just add 's'
-       */ 
-      key = key.endsWith('y')
-      ? `${key.substr(0, key.length)}ies` 
-      : `${key}s`;
-
-    }
-
-    return key;
+  protected getServiceInstance(): AbstractService<T> {
+    return this.service;
   }
 
   /**
-   * @description Returns an HTTP response to the client
+   * Returns an HTTP response to the client
    * 
    * @param {Request} req
    * @param {Response} res 
    * @param {ResponseOptions<T>} options 
    * @returns void
+   * @memberof AbstractController<T>
    */
-  protected httpResponse (req: Request, res: Response, options: HTTPResponseOptions<T>): void {
-    let { keep, message, status, success, ...data } = options;
+  protected httpResponse (res: Response, options: IResponseData<T>): Response {
 
-    //Todo: Do something with keep
+    const { keep, message, success, status, ...data } = options;
+    const statusCode = status || this.httpStatus.OKAY;
+    this.setAuthUser({} as T);
 
-    status = status || this.OKAY;
-    res.status(status).json({
-      success: success || status < this.BAD_REQUEST,
+    return res.status(statusCode).json({
+      success: success || statusCode < this.httpStatus.BAD_REQUEST,
       message,
       ...data
-    });
+     });
   }
 
   /**
-   *
-   *
-   * @param {Request} req
-   * @param {Response} res
-   * @param {CustomError} errors
-   * @returns
-   * @memberof AbstractController
-   */
-  errorResponse (req: Request, res: Response, errors: CustomError) {
-    const { error, status } = errors;
-    return res.status(status || 500).json({ 
-      success: false,
-      [error.constructor === String ? 'message' : 'errors' ]: 
-        req.app.settings.env === 'development' 
-          ? error
-          : this.getMessage('error.server')
-    });
-  }
-
-  /**
-   * @description Gets the base URL
+   * Sets the authenticated user
    *
    * @protected
-   * @returns {string} the base URL
-   * @memberof UtilityService
+   * @param {T} user
+   * @returns void
+   * @memberof @memberof AbstractController<T>
    */
-  protected getBaseURL (): string {
-    return this.baseURL;
+  protected setAuthUser (user: T): void {
+    this.authUser = user;
   }
 
   /**
-   * @description Sets the base URL
+   * Sets the base URL
    *
    * @protected
    * @param {Request} req
    * @returns void
-   * @memberof UtilityService
+   * @memberof AbstractController<T>
    */
-  protected setBaseURL (req: Request): void {
-    let baseURL;
-    if (req.app.settings.env !== 'production') {
-      baseURL = `${req.protocol}://${req.get('host')}`;
-    } else {
-      baseURL = configs.api.apiURL;
+  protected getBaseUrl (req: Request): string {
+
+    const baseURL = (req.app.settings.env !== 'production')
+      ? `${req.protocol}://${req.get('host')}`
+      :  configs.api.apiURL;
+
+    return `${baseURL}/api/v${configs.api.version}`;
+  }
+
+  /**
+   * Runs a callback function asynchronously
+   *
+   * @protected
+   * @param {Function} callback
+   * @returns {Promise<Function>} an asynchronous function
+   * @memberof AbstractController<T>
+   */
+  protected tryCatch (callback: Function): RequestHandler {
+    return async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
+      try {
+        const response = await callback(req, res, next);
+
+        return (typeof response === 'function')
+          ? response()
+          : this.httpResponse(res, response);
+      } catch (error) {
+        return this.errorResponse(res, error);
+      }
     }
-    this.baseURL = `${baseURL}/api/v${configs.api.version}`;
   }
 }
