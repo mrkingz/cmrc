@@ -1,5 +1,5 @@
 import express, { Request, Response, Router} from 'express';
-import userController from '../controllers/UserController'
+import authController from '../controllers/UserController'
 
 
 const authRoutes: Router = express.Router();
@@ -18,27 +18,27 @@ authRoutes.get('/csrfToken', (req: Request, res: Response) => {
  * Sign up a new user
  */
 authRoutes.post('/signup', 
-  userController.checkIfUniqueEmail(), 
-  userController.signUp());
+  authController.checkIfUniqueEmail(), 
+  authController.signUp());
 
 /**
  * Update password
  */
-authRoutes.post('/signin', userController.signIn());
+authRoutes.post('/signin', authController.signIn());
 
 /**
  * Activates user's account email is verified
  */
-authRoutes.get('/verification/:token',  userController.accountVerification());
+authRoutes.get('/verification/:token',  authController.accountVerification());
 
 /**
  * Send a password reset email
  */
-authRoutes.post('/password', userController.sendPasswordResetLink());
+authRoutes.post('/password', authController.sendPasswordResetLink());
 
 /**
  * Send a password reset email
  */
-authRoutes.put('/password/:token', userController.updatePassword());
+authRoutes.put('/password/:token', authController.updatePassword());
 
 export default authRoutes

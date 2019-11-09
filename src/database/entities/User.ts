@@ -1,6 +1,8 @@
-import { Entity, Column } from 'typeorm';
+import bcrypt from 'bcryptjs';
+import { Entity, Column, BeforeInsert, BeforeUpdate } from 'typeorm';
+import { IsEmail, MinLength, MaxLength, IsDefined, IsNotEmpty } from 'class-validator';
+
 import AbstractEntity from './AbsrtactEntity';
-import { IsEmail, MinLength, MaxLength, IsDefined, IsNotEmpty, IsUrl, ValidateIf } from 'class-validator';
 
 @Entity('users')
 export default class User extends AbstractEntity {
@@ -28,10 +30,7 @@ export default class User extends AbstractEntity {
   @Column({ type: 'varchar', length: 60 })
   @MinLength(8, { message: `Password must be at least $constraint1 characters` })
   @MaxLength(30, { message: `Password cannot be longer than $constraint1 characters` })
-  password!: string
-
-  @Column({ type: 'varchar', nullable: true, unique: true, length: 20 })
-  phoneNumber!: string
+  password!: string;
 
   @Column({ type: 'varchar', nullable: true,  unique: true, length: 100 })
   photo!: string;
@@ -40,12 +39,32 @@ export default class User extends AbstractEntity {
   @Column({ type: 'varchar', nullable: true, unique: true, length: 100 })
   rememberMeToken!: string;
 
-  @Column({ type: 'boolean', default: false })
-  passwordReset!: boolean;
+  @Column({ type: 'bigint', default: 0 })
+  resetStamp!: number;
 
   @Column({ type: 'boolean', default: false })
   isAdmin!: boolean;
 
   @Column({ type: 'boolean', default: false })
   isVerified!: boolean;
+
+  @BeforeInsert()
+  beforeInsert() {
+    this.password = bcrypt.hashSync(this.password, bcrypt.genSaltSync(10));
+  }
+
+  @BeforeUpdate()
+  beforeUpdate() {
+    // If password has been updated, it'll be unhashed
+    // and the length must be less or equal to max password length; i.e., 30
+    if (Number(this.resetStamp) > 0 && this.password.length <= 30) {
+      this.password = bcrypt.hashSync(this.password, bcrypt.genSaltSync(10));
+      this.resetStamp = 0;
+    }
+  }
+
+  public com (password: string): boolean {
+    console.log(password, this.password);
+    return true;
+  }
 };

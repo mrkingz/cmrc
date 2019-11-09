@@ -1,41 +1,41 @@
-import express, { Router, Request, Response, NextFunction} from 'express';
-import userController from '../controllers/UserController';
+import express, { Router} from 'express';
+import UserController from '../controllers/UserController';
 
 
 const userRoutes: Router = express.Router();
 
-userRoutes.all('/*', userController.authenticateUser());
+userRoutes.all('/*', UserController.authenticateUser());
 
 /**
  * Route to update profile
  */
-userRoutes.put('/profile', userController.updateProfile());
+userRoutes.put('/profile', UserController.updateProfile());
 
 /**
  * Route to get all users
  */
-userRoutes.get('/', userController.authorizeUser(), userController.getUsers());
+userRoutes.get('/', UserController.authorizeUser(), UserController.getUsers());
 
 /**
  * Route to get a single user
  */
-userRoutes.get('/:userId', userController.getProfile());
+userRoutes.get('/:userId', UserController.getProfile());
 
 /**
  * Route to search for users by name
  */
-userRoutes.post('/search', userController.authorizeUser(), userController.searchUsers());
+userRoutes.post('/search', UserController.authorizeUser(), UserController.searchUsers());
 
 /**
  * Routes to upload a profile photo
  */
 userRoutes.put('/uploadPhoto', 
-  userController.uploadFileToStorage('image'),
-  userController.updateProfilePhotoURL()
+  UserController.uploadFileToStorage('image'),
+  UserController.updateProfilePhotoURL()
 )
 
 /**
  * Routes to remove profile photo
  */
-userRoutes.delete('/removePhoto', userController.removePhoto())
+userRoutes.delete('/removePhoto', UserController.removePhoto())
 export default userRoutes;

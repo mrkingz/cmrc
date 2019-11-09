@@ -1,17 +1,16 @@
 import configs from '../../configs';
-import userController from '../../controllers/UserController';
+import bcrypt from 'bcryptjs';
 
-export default [{
+export default {
   firstName: 'Kingsley',
   lastName: 'Frank-Demesi',
   email: configs.app.admin.email,
-  password: userController.hashPassword(configs.app.admin.password as string),
+  password: bcrypt.hashSync(configs.app.admin.password as string, bcrypt.genSaltSync(10)),
   photo: null,
   phoneNumber: null,
   rememberMeToke: null,
-  passwordReset: false,
   isAdmin: true,
   isVerified: true,
   createdAt: new Date(),
   updatedAt: new Date()
-}];
+};

@@ -1,7 +1,7 @@
 import { Not } from 'typeorm';
 import isEmpty from 'lodash.isempty';
 import sendGrid from '@sendgrid/mail';
-import { Request, Response, RequestHandler, NextFunction, ErrorRequestHandler } from 'express';
+import { Request, Response, RequestHandler, NextFunction } from 'express';
 
 import configs from '../configs'
 import { IUser } from '../interfaces/User';
@@ -42,29 +42,13 @@ class UserController extends AuthController implements IFileUploader {
   }
 
   /**
-   * @description Gets all registered users
+   * @description Overrides getFileUploader of IFileUploader
    *
-   * @returns {RequestHandler}
+   * @returns {Fileservice}
    * @memberof UserController
    */
-  public getUsers (): RequestHandler {
-    return this.tryCatch(async (req: Request) => {
-      // If status is defined in the query object, 
-      // then filter users base on their account status; i.e., verified/unverified
-      const status = req.query.status ? { isVerified: req.query.status } : {};
-
-      const users = await this.getRepository().paginate({ 
-        select: this.getRepository().getSelectables(),
-        where: { id: Not(this.getAuthUser().id), ...status },
-        page: req.query.page,
-        limit: req.query.limit,
-        sort: req.query.sort
-      });
-
-      return this.getResponseData(users, 
-        this.getMessage(isEmpty(users.data) ? `entity.emptyList` : `entity.retrieved`, `Users`)
-      );
-    });
+  public getFileUploader (): Fileservice {
+    return new Fileservice();
   }
 
   /**
@@ -95,9 +79,32 @@ class UserController extends AuthController implements IFileUploader {
         throw this.rejectionError(this.getMessage('error.unauthorized'), this.UNAUTHORIZED);
       }
 
-      return this.getResponseData(
-        this.removePasswordFromUserData(user),
-        this.getMessage('entity.retrieved', 'Prifile')
+      return this.getResponseData(user, this.getMessage('entity.retrieved', 'Prifile'));
+    });
+  }
+
+  /**
+   * @description Gets all registered users
+   *
+   * @returns {RequestHandler}
+   * @memberof UserController
+   */
+  public getUsers (): RequestHandler {
+    return this.tryCatch(async (req: Request) => {
+      // If status is defined in the query object, 
+      // then filter users base on their account status; i.e., verified/unverified
+      const status = req.query.status ? { isVerified: req.query.status } : {};
+
+      const users = await this.getRepository().paginate({ 
+        select: this.getRepository().getSelectable(),
+        where: { id: Not(this.getAuthUser().id), ...status },
+        page: req.query.page,
+        limit: req.query.limit,
+        sort: req.query.sort
+      });
+
+      return this.getResponseData(users, 
+        this.getMessage(isEmpty(users.data) ? `entity.emptyList` : `entity.retrieved`, `Users`)
       );
     });
   }
@@ -116,10 +123,7 @@ class UserController extends AuthController implements IFileUploader {
       
       await this.getFileUploader().deleteFile(this.getAuthUser().email as string);
 
-      return this.getResponseData(
-        this.removePasswordFromUserData(user), 
-        this.getMessage('entity.file.removed', 'Profile photo')
-      );
+      return this.getResponseData(user, this.getMessage('entity.file.removed', 'Profile photo'));
     });
   }
 
@@ -134,7 +138,7 @@ class UserController extends AuthController implements IFileUploader {
       const {page, limit, sort } = req.query;
       const sortArray = sort ? sort.split(':') : [];
 
-      const data = await this.getRepository().getSearchClient().searchIndex({
+      const data = await (<UserRepository>this.getRepository()).getSearchClient().searchIndex({
         multi_match: {
           query: req.body.name,
           type: 'phrase_prefix',
@@ -147,78 +151,6 @@ class UserController extends AuthController implements IFileUploader {
       });
 
       return this.getResponseData(data);
-    });
-  }
-
-  /**
-   * @description Sign up a new user
-   * 
-   * @returns {RequestHandler}
-   * @memberof AuthController
-   */
-  public signUp (): RequestHandler {
-    return this.tryCatch(async (req: Request): Promise<object> => {
-      this.setBaseURL(req);
-      await this.getRepository().validator(req.body);
-
-      const user: IUser = await this.getRepository().save({
-        ...req.body,
-        password: this.hashPassword(req.body.password) 
-      });
-
-      // Create search index, so users can be searched by names
-      await this.getRepository().getSearchClient().createIndex({ 
-        id: user.id, firstName: user.firstName, lastName: user.lastName 
-      });
- 
-      this.sendEmailNotification(user, this.VERIFICATION);
-
-      return this.getResponseData(
-        this.removePasswordFromUserData(user), 
-        this.getMessage(`email.${this.VERIFICATION}.message`), 
-        this.CREATED
-      );
-    });
-  }
-
-  /**
-   * @description Updates password
-   *
-   * @returns {RequestHandler}
-   * @memberof UserController
-   */
-  public updatePassword (): RequestHandler {
-    return this.tryCatch(async (req: Request) => {
-      const { password } = req.body;
-      const { id } = await this.validateToken(req.params.token, this.PASSWORD);
-
-      await this.getRepository().validator({ password }, { 
-        skip: ['firstName', 'lastName', 'email'], // Skip these fields during validation
-      });
-
-      const updatedUser = await this.getRepository().update(
-        { id }, 
-        { passwordReset: false, password: this.hashPassword(password as string) },
-        this.getMessage(`error.${this.PASSWORD}.invalid`),
-        /*
-         * Callback to check if: 
-         * - link has already been used
-         * - user entered a new password tht is different from the old password
-         */ 
-        async (user: IUser) => {
-          if (user.passwordReset) { // true, if link has already been used
-            throw this.rejectionError(this.getMessage(`error.${this.PASSWORD}.used`), this.UNAUTHORIZED)
-          } else if (this.confirmPassword(password, user.password as string, 
-              this.getMessage(`error.required`, this.PASSWORD))) {
-            throw this.rejectionError(this.getMessage(`error.${this.PASSWORD}.same`), this.UNAUTHORIZED);
-          }
-        }
-      );
-
-      return this.getResponseData(
-        this.removePasswordFromUserData(updatedUser),
-        this.getMessage('entity.updated', this.capitalizeFirst(this.PASSWORD))
-      )
     });
   }
 
@@ -265,10 +197,7 @@ class UserController extends AuthController implements IFileUploader {
         { id: this.getAuthUser().id }, { photo: decodeURIComponent(file.secure_url)}
       );
 
-      return this.getResponseData(
-        this.removePasswordFromUserData(user), 
-        this.getMessage('entity.updated', 'Profile photo')
-      );
+      return this.getResponseData(user, this.getMessage('entity.updated', 'Profile photo'));
     })
   }
 
@@ -285,35 +214,24 @@ class UserController extends AuthController implements IFileUploader {
 
       let updates: { [key: string]: string} = {};
       Object.keys(details).forEach(key => { updates[key] = details[key]; });
-      
-      updates = await this.getRepository().validator(updates, {
+      const keys = Object.keys(updates);
+
+      await this.getRepository().validator(updates, {
         // skip other fillable fields that are not being updated
-        skip: this.getRepository().getFillables().filter((field: string) => {
-                return !Object.keys(updates).includes(field as string) 
+        skip: this.getRepository().getFillable().filter((field: string) => {
+                return !keys.includes(field as string) 
               })
       }) as {};
 
-      const updated: IUser = await this.getRepository().update({ id: this.getAuthUser().id }, updates);
-
-      return this.getResponseData(
-        this.removePasswordFromUserData(updated), 
-        this.getMessage('entity.updated', 'Profile')
+      const updated: IUser = await this.getRepository().update(
+        { id: this.getAuthUser().id }, updates
       );
-    });
-  }
 
-  /**
-   * @description Overrides getFileUploader of IFileUploader
-   *
-   * @returns {Fileservice}
-   * @memberof UserController
-   */
-  public getFileUploader (): Fileservice {
-    return new Fileservice();
+      return this.getResponseData(updated, this.getMessage('entity.updated', 'Profile'));
+    });
   }
 }
 
 export default new UserController(
-  new NotificationService(), 
-  new UserRepository()
+  new NotificationService(), new UserRepository()
 );

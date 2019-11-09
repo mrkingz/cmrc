@@ -26,7 +26,7 @@ export default {
     notFound: `:value not found`,
     required: `:value is required`,
     empty: `:value cannot be empty`,
-    verified: `:value link has already been used`,
+    verified: `Account has been verified and activated`,
     server: `Internal error occured, try again later!`,
     conflict: 'Email address has been used',
     unauthorized: `You do not have the privilege for this operation`,

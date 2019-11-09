@@ -1,4 +1,3 @@
-import { createConnection, Connection } from 'typeorm';
 import express, { Application } from 'express';
 
 import appInit from './app';
@@ -16,9 +15,11 @@ const app: Application = express();
     await appInit(app);
 
     // Connect to database
-    await databaseConnection(app.get('env'));
+    await databaseConnection(
+      app.get('env') === 'development' ? 'default' : app.get('env')
+    );
 
-    const PORT = configs.app.port || 3000;
+    const PORT = configs.app.port || 8080;
     // We can start our app now 
     await app.listen(PORT, (): void => {
       console.log(`Server running on PORT ${PORT} in ${app.get('env')} mode`);

@@ -1,10 +1,9 @@
 import isEmpty from 'lodash.isempty';
-import { FindOneOptions, FindConditions } from 'typeorm';
+import { FindOneOptions, FindConditions, Repository } from 'typeorm';
 import { validate, ValidationError } from 'class-validator';
 
 import constants from '../../constants';
 import configs from '../../configs/index';
-import SearchClient from '../search/SearchClient';
 import UtilityService from '../utilities/UtilityService';
 import { IPaginationData } from '../../interfaces/Pangination';
 import { IValidatorOptions, IFindConditions } from '../../interfaces/Repository';
@@ -39,7 +38,7 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @type {Array<string>}
    * @memberof AbstractRepository
    */
-  protected readonly fillables: Array<string> = [];
+  protected readonly fillable: Array<string> = [];
 
   /**
    * @description List of selectable fields. Subclass should override this property 
@@ -49,7 +48,18 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @type {Array<string>}
    * @memberof AbstractRepository
    */
-  protected readonly selectables: Array<string> = [];
+  protected readonly selectable: Array<string> = [];
+
+  /**
+   * @description List of fields not to include in JSON response to client. Subclass should 
+   * override this property 
+   * with a list of hiddens fields
+   *
+   * @protected
+   * @type {Array<string>}
+   * @memberof AbstractRepository
+   */
+  protected readonly hidden: Array<string> = [];
 
   constructor (entityName: string) {
     super();
@@ -57,13 +67,13 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   }
 
   /**
-   * @description Creates an insatnce of Repository for validation
+   * @description Builds an insatnce of Repository for validation
    *
    * @param {T} fields
    * @returns {T}
    * @memberof AbstractRepository
    */
-  public abstract create (fields: T): T;
+  public abstract build (fields: T): any;
 
   /**
    * @description Filter out the mass assignable/fillable fields
@@ -75,8 +85,8 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    */
   private filter (values: { [key: string]: string }): object {
     let fillables: { [key: string]: string } = {};
-    if (!isEmpty(this.getFillables())) {
-      this.getFillables().forEach(value => {
+    if (!isEmpty(this.getFillable())) {
+      this.getFillable().forEach(value => {
         fillables[value] = values[value];
       });
     }
@@ -146,7 +156,7 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @param {FindOneOptions<T>} options
    * @param {string} message error message if entity is not found
    * @returns
-   * @memberof BaseController
+   * @memberof AbstractRepository
    */
   public async findOneOrFail (options: FindOneOptions<T>, message?: string): Promise<T> {
 
@@ -161,17 +171,6 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   }
 
   /**
-   * @description Gets the fillable properties. Subclass must return array of fillables
-   *
-   * @abstract
-   * @returns {Array<string>}
-   * @memberof AbstractRepository
-   */
-  public  getFillables (): Array<string> {
-    return this.fillables;
-  }
-
-  /**
    * @description Gets the name of the entity/model
    * 
    * @returns {string} the name of the enitity
@@ -182,12 +181,26 @@ export default abstract class AbstractRepository<T> extends UtilityService {
   }
 
   /**
-   * @description Gets the search client instance
+   * @description Gets the fillable properties. Subclass must return array of fillables
    *
-   * @returns {SearchClient} an instance of the search client
+   * @abstract
+   * @returns {Array<string>}
    * @memberof AbstractRepository
    */
-  public abstract getSearchClient (): SearchClient<T>;
+  public getFillable (): Array<string> {
+    return this.fillable;
+  }
+
+  /**
+   * @description Gets the array of fields not to include in the HTTP Rosponse JSON
+   *
+   * @abstract
+   * @returns {Array<string>}
+   * @memberof AbstractRepository
+   */
+  public getHiddenFields (): Array<string> {
+    return this.hidden;
+  }
 
   /**
    * @description Gets an instance of the entity's repository interface
@@ -205,8 +218,8 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @returns {Array<string>}
    * @memberof AbstractRepository
    */
-  public getSelectables(): Array<string> {
-    return this.selectables;
+  public getSelectable(): Array<string> {
+    return this.selectable;
   }
 
   /**
@@ -243,10 +256,14 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @description Saves a new instance/row of the entity
    * 
    * @param fields the entity fields
-   * @returns {Promise<T>} the created fields
+   * @returns {Promise<T>}
    */
-  public async save (fields: T): Promise<T> {
-    const { ...data } = await this.getRepository().save(this.filter(fields as {}));
+  public async save (fields: any): Promise<T> {
+    const { ...data } = await this.getRepository().save(
+      // Call create on the fields so Listeners/Subscribers can be triggered
+      this.getRepository().create(this.filter(fields))
+    );
+
     return data;
   }
 
@@ -264,13 +281,13 @@ export default abstract class AbstractRepository<T> extends UtilityService {
    * @description Updates an entity
    *
    * @protected
-   * @param {object} values
+   * @param {object} values the values
    * @param {string} [message] optional message to send if entity to update does not exist
    * @param {function} [callback] optional callback function before updating
-   * @returns
-   * @memberof BaseController
+   * @returns {Promise<T>}
+   * @memberof AbstractRepository
    */
-  public async update (condition: FindConditions<T>, updates: T, message?: string,  callback?: Function): Promise<T> {
+  public async update (condition: FindConditions<T>, values: T, message?: string,  callback?: Function): Promise<T> {
     message = message || this.getMessage('error.notFound', this.getEntityName());
     const entity: T = await this.findOneOrFail(condition, message as string);
 
@@ -278,7 +295,29 @@ export default abstract class AbstractRepository<T> extends UtilityService {
       await callback(entity);
     }
     
-    return await this.getRepository().save({ ...entity, ...updates });
+    // Call create on the updated fields so Listeners/Subscribers can be triggered
+    return await this.getRepository().save(
+      this.getRepository().create({...entity, ...values })
+    );
+  }
+  
+  /**
+   *
+   *
+   * @param {FindConditions<T>} condition
+   * @param {T} values the values
+   * @returns {Promise<T>}
+   * @memberof AbstractRepository
+   */
+  public async updateOrCreate (condition: FindConditions<T>, values: T): Promise<T> {
+    const entity: T = await this.findOne(condition);
+    
+    return isEmpty(entity) 
+      ? await this.save({ ...condition, ...values })
+      : await this.getRepository().save(
+        // Call create on the updated fields so Listeners/Subscribers can be triggered
+          this.getRepository().create({...entity, ...values })
+        ); 
   }
   
   /**

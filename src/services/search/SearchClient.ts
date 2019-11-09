@@ -3,7 +3,6 @@ import { Client, ClientOptions, ApiResponse } from '@elastic/elasticsearch';
 import configs from '../../configs/index';
 import AbstractRepository from '../repositories/AbstractRepository';
 import { PaginationParams } from '../../interfaces/Pangination';
-import isEmpty = require('lodash.isempty');
 
 export default class SearchClient<T> extends Client {
   /**

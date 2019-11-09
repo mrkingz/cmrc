@@ -64,7 +64,8 @@ export default class NotificationService {
       theme: 'default',
       product: {
           name: 'CMRC',
-          link: configs.app.domain
+          link: configs.app.domain,
+          logo: 'https://res.cloudinary.com/mrkingz/image/upload/v1573529759/cmrc/logo.png'
       }
     })
   }

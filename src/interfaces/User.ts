@@ -9,9 +9,9 @@ export interface IUser {
   isAdmin?: boolean;
   isVerified?: boolean;
   photo?: string | null;
-  passwordReset?: boolean;
   rememberMeToken?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  resetStamp?: number;
 };
 

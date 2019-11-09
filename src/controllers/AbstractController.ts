@@ -1,15 +1,15 @@
-import { NextFunction } from 'connect';
 import { isUndefined } from 'util';
 import isEmpty from 'lodash.isempty';
+import { NextFunction } from 'connect';
 import { Request, Response } from 'express';
 
 import configs from '../configs';
 import constants from '../constants';
+import CustomError from '../services/utilities/CustomError';
 import UtilityService from '../services/utilities/UtilityService';
 import HTTPResponseOptions from '../interfaces/HTTPResponseOptions';
 import IHTTPResponseOptions from '../interfaces/HTTPResponseOptions';
 import RespositoryService from '../services/repositories/AbstractRepository';
-import CustomError from '../services/utilities/CustomError';
 
 
 const { status } = constants;
@@ -20,7 +20,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    *
    * @protected
    * @type {string}
-   * @memberof BaseController
+   * @memberof AbstractController<T>
    */
   protected baseURL!: string;
 
@@ -38,7 +38,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    *
    * @protected
    * @type {number}
-   * @memberof AbstractController
+   * @memberof AbstractController<T>
    */
   protected readonly OKAY: number = status.OKAY
 
@@ -47,7 +47,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    *
    * @protected
    * @type {number}
-   * @memberof AbstractController
+   * @memberof AbstractController<T>
    */
   protected readonly BAD_REQUEST: number = status.BAD_REQUEST;
 
@@ -65,7 +65,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    *
    * @protected
    * @type {T}
-   * @memberof AbstractController
+   * @memberof AbstractController<T>
    */
   protected authUser!: T;
 
@@ -74,71 +74,87 @@ export default abstract class AbstractController<T>  extends UtilityService {
    *
    * @protected
    * @type {number}
-   * @memberof AbstractController
+   * @memberof AbstractController<T>
    */
   protected readonly UNAUTHORIZED: number = status.UNAUTHORIZED;
 
   protected constructor() {
     super();
   }
-  
+
   /**
-   * @description Gets the respository service instance
+   * @description Handles error response
+   *
+   * @param {Request} req
+   * @param {Response} res
+   * @param {CustomError} errors
+   * @returns
+   * @memberof AbstractController<T>
+   */
+  errorResponse (req: Request, res: Response, errors: CustomError) {
+    const { error, status } = errors;
+
+    return res.status(status || 500).json({ 
+      success: false,
+      [typeof error === 'string' ? 'message' : 'errors' ]: errors
+        // error && req.app.settings.env === 'development' 
+        //   ? error
+        //   : this.getMessage('error.server')
+    });
+  }
+
+  /**
+   * @description Filters hidden fields/properties from the JSON response data
+   *
+   * @private
+   * @param {{[key: string]: any }} entity
+   * @returns {T}
+   * @memberof AbstractController<T>
+   */
+  private filterJSONResponse (entity: {[key: string]: any }): T {
+    const filtered: {[key: string]: any } = {};
+
+    const hiddenFields: Array<string> = this.getRepository().getHiddenFields();
+    Object.keys(entity).forEach(key => {
+      if (!hiddenFields.includes(key)) {
+        filtered[key] = entity[key]
+      }
+    })
+
+    return filtered as T;
+  }
+
+  /**
+   * @description Gets the base URL
    *
    * @protected
-   * @abstract
-   * @returns {RespositoryService<T>}
-   * @memberof AbstractController
+   * @returns {string} the base URL
+   * @memberof AbstractController<T>
    */
-  protected abstract getRepository (): RespositoryService<T>;
+  protected getBaseURL (): string {
+    return this.baseURL;
+  }
+
 
   /**
    * @description Gets the authenticated user
    *
    * @protected
    * @returns {T}
-   * @memberof AbstractController
+   * @memberof AbstractController<T>
    */
   protected getAuthUser (): T {
     return this.authUser;
   }
-
-  /**
-   * @description Sets the authenticated user
+    /**
+   * @description Gets the respository service instance
    *
    * @protected
-   * @param {T} user
-   * @memberof AbstractController
+   * @abstract
+   * @returns {RespositoryService<T>}
+   * @memberof AbstractController<T>
    */
-  protected setAuthUser (user: T) {
-    this.authUser = user;
-  }
-
-  /**
-   * @description Runs a callback function asynchronously
-   *
-   * @protected
-   * @param {Function} callback
-   * @returns {Promise<Function>} an asynchronous function
-   * @memberof BaseController
-   */
-  protected tryCatch (callback: Function) {
-    return async (req: Request, res: Response, next: NextFunction): Promise<any> => {
-      try {
-        const response = await callback(req, res, next) as any;
-        /**
-         *  Sometimes we may want to delegate request to the next middleware 
-         *  or even call a function that is returned by the call back
-         *  we check for the type of response received, and then use it accordingly
-         */ 
-        return (response.constructor === Function)
-          ? response()
-          : this.httpResponse(req, res, response);
-      } catch (error) {
-        return this.errorResponse(req, res, error);
-      }
-    }
-  }
+  protected abstract getRepository (): RespositoryService<T>;
 
   /**
    * @description Gets the response data, status and message
@@ -148,18 +164,19 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @param {string} message
    * @param {number} [status=200]
    * @returns {object}
-   * @memberof AbstractController
+   * @memberof AbstractController<T>
    */
-  protected getResponseData (data: {[key: string]: any | string }, message?: string, status: number = this.OKAY): IHTTPResponseOptions<T> {
+  protected getResponseData (data: {[key: string]: any }, message?: string, status?: number): IHTTPResponseOptions<T> {
+    
     const { token, pagination, ...details } = data;
 
     if (!isEmpty(data)) {
       const entity = isUndefined(pagination) ? details : details.data;
 
       let response: {[key: string]: string | number | object } = { 
-        status,
+        status: status || this.OKAY,
         data: {
-          [this.getResponseDataKey(entity)]: entity, 
+          [this.getResponseDataKey(entity)]: this.filterJSONResponse(entity), 
           token
         }
       };
@@ -178,7 +195,8 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @description Gets the corresponding key the data will be mapped to
    * 
    * @param {Object | Array<any>} data 
-   * @returns object
+   * @returns {string}
+   * @memberof AbstractController<T>
    */
   private getResponseDataKey (data: T | Array<any>): string {
     let key = this.getRepository().getEntityName().toLowerCase();
@@ -194,7 +212,6 @@ export default abstract class AbstractController<T>  extends UtilityService {
       key = key.endsWith('y')
       ? `${key.substr(0, key.length)}ies` 
       : `${key}s`;
-
     }
 
     return key;
@@ -207,6 +224,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @param {Response} res 
    * @param {ResponseOptions<T>} options 
    * @returns void
+   * @memberof AbstractController<T>
    */
   protected httpResponse (req: Request, res: Response, options: HTTPResponseOptions<T>): void {
     let { keep, message, status, success, ...data } = options;
@@ -222,34 +240,15 @@ export default abstract class AbstractController<T>  extends UtilityService {
   }
 
   /**
-   *
-   *
-   * @param {Request} req
-   * @param {Response} res
-   * @param {CustomError} errors
-   * @returns
-   * @memberof AbstractController
-   */
-  errorResponse (req: Request, res: Response, errors: CustomError) {
-    const { error, status } = errors;
-    return res.status(status || 500).json({ 
-      success: false,
-      [error.constructor === String ? 'message' : 'errors' ]: 
-        req.app.settings.env === 'development' 
-          ? error
-          : this.getMessage('error.server')
-    });
-  }
-
-  /**
-   * @description Gets the base URL
+   * @description Sets the authenticated user
    *
    * @protected
-   * @returns {string} the base URL
-   * @memberof UtilityService
+   * @param {T} user
+   * @returns void
+   * @memberof @memberof AbstractController<T>
    */
-  protected getBaseURL (): string {
-    return this.baseURL;
+  protected setAuthUser (user: T): void {
+    this.authUser = user;
   }
 
   /**
@@ -258,7 +257,7 @@ export default abstract class AbstractController<T>  extends UtilityService {
    * @protected
    * @param {Request} req
    * @returns void
-   * @memberof UtilityService
+   * @memberof AbstractController<T>
    */
   protected setBaseURL (req: Request): void {
     let baseURL;
@@ -268,5 +267,31 @@ export default abstract class AbstractController<T>  extends UtilityService {
       baseURL = configs.api.apiURL;
     }
     this.baseURL = `${baseURL}/api/v${configs.api.version}`;
+  }
+
+  /**
+   * @description Runs a callback function asynchronously
+   *
+   * @protected
+   * @param {Function} callback
+   * @returns {Promise<Function>} an asynchronous function
+   * @memberof AbstractController<T>
+   */
+  protected tryCatch (callback: Function) {
+    return async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+      try {
+        const response = await callback(req, res, next) as any;
+        /**
+         *  Sometimes we may want to delegate request to the next middleware 
+         *  or even call a function that is returned by the call back
+         *  we check for the type of response received, and then use it accordingly
+         */ 
+        return (response.constructor === Function)
+          ? response()
+          : this.httpResponse(req, res, response);
+      } catch (error) {
+        return this.errorResponse(req, res, error);
+      }
+    }
   }
 }

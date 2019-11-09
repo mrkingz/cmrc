@@ -1,0 +1,67 @@
+version: '3'
+
+services: 
+  api:
+    container_name: api
+    build: .
+    ports: 
+      - 6000:6000
+    environment:
+      - ES_HOSTS=elasticsearch
+      - NODE_PORT=6000
+
+    command: npm run start
+    
+    links:
+      - elasticsearch
+      - postgres
+    depends_on: 
+      - elasticsearch
+      - postgres
+    networks: 
+      - elastic
+
+  postgres:
+    container_name: postgres
+    image: postgres:11.2
+    environment:
+      DB_HOST: postgressql
+      POSTGRES_DB: cmrc_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456789
+    ports:
+      - 5432:5432
+    networks:
+      - postgressql
+
+  elasticsearch: 
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.0
+    environment: 
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+    ulimits: 
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    # logging:
+    #   driver: 
+    ports:
+      - 9300:9300
+      - 9200:9200
+    networks:
+      - elastic
+
+volumes:
+  esdata:
+    driver: local
+
+networks: 
+  elastic:
+    driver: bridge
+  postgressql:
+    driver: bridge
+

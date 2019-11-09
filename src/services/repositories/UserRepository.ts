@@ -1,4 +1,4 @@
-import { getRepository } from 'typeorm';
+import { getRepository, Repository } from 'typeorm';
 
 import ISearch from '../../interfaces/Search';
 import { IUser } from '../../interfaces/User';
@@ -24,7 +24,7 @@ export default class UserRepository extends AbstractRepository<IUser> implements
    * @type {Array<string>}
    * @memberof UserRepository
    */
-  protected readonly fillables: Array<string> = [
+  protected readonly fillable: Array<string> = [
     'firstName', 'lastName', 'email', 'password'
   ]; 
 
@@ -35,10 +35,12 @@ export default class UserRepository extends AbstractRepository<IUser> implements
    * @type {Array<string>}
    * @memberof UserRepository
    */
-  protected readonly selectables: Array<string> = [
-    'id','firstName', 'lastName', 'email', 'isAdmin', 'photo', 'passwordReset',
-    'rememberMeToken', 'phoneNumber', 'isVerified', 'createdAt', 'updatedAt'
+  protected readonly selectable: Array<string> = [
+    'id','firstName', 'lastName', 'email', 'isAdmin', 'photo','rememberMeToken', 
+    'phoneNumber', 'isVerified', 'createdAt', 'updatedAt'
   ]; 
+
+  protected readonly hidden: Array<string> = ['password', 'resetStamp'];
 
   /**
    * @description Creates a singleton of UserRepository.
@@ -61,18 +63,18 @@ export default class UserRepository extends AbstractRepository<IUser> implements
    * @returns
    * @memberof UserRepository
    */
-  public getRepository () {
+  public getRepository (): Repository<IUser> {
     return getRepository(this.getEntityName());
   }
 
   /**
-   * @description Creates an instance of User repository
+   * @description Builds an instance of User repository
    *
    * @param {IUser} fields
    * @returns {IUser} instance of User repository
    * @memberof UserRepository
    */
-  public create (fields: IUser): IUser {
+  public build (fields: IUser): IUser {
     return this.getRepository().create(fields) as IUser;
   }
 
