@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="d16cc7c8-25bd-4710-b367-116d21402362" name="Default Changelist" comment="">
+<<<<<<< Updated upstream
+      <change afterPath="$PROJECT_DIR$/.idea/copyright/Kingsley_Frank_Demesi.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/services/Service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.eslintrc.js" beforeDir="false" afterPath="$PROJECT_DIR$/.eslintrc.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/kingsleyfrank_demesi.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dictionaries/kingsleyfrank_demesi.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/controllers/AbstractController.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/controllers/AbstractController.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/controllers/AuthController.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/controllers/AuthController.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/controllers/ServiceController.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/controllers/ServiceController.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/controllers/UserController.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/controllers/UserController.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/database/entities/Service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/database/entities/Service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/interfaces/Notifiable.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/interfaces/Notifiable.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/interfaces/Searchable.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/interfaces/Searchable.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lang/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/langs/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/repositories/AbstractRepository.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/repositories/AbstractRepository.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/repositories/UserRepository.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/repositories/UserRepository.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/routes/serviceRoutes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/routes/serviceRoutes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/routes/userRoutes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/routes/userRoutes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/notifications/NotificationService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/vendors/notifications/Notification.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/repositories/Service.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/search/SearchClient.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/vendors/search/SearchClient.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/upload/FileService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/vendors/upload/FileUpload.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/upload/StorageService.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/vendors/upload/CloudStorage.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/utilities/CustomError.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/vendors/utilities/CustomError.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/utilities/UtilityService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/vendors/utilities/UtilityService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/setup/app.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/setup/app.ts" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+>>>>>>> Stashed changes
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FavoritesManager">
+    <favorites_list name="cmrc" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="TypeScript File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="refactoring" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="1WKLOX0zv7bZ3Azj864MqFYz5iN" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="prettierjs.PrettierConfiguration.Package" value="$PROJECT_DIR$/node_modules/prettier" />
+    <property name="settings.editor.selected.configurable" value="preferences.editor" />
+    <property name="ts.external.directory.path" value="$PROJECT_DIR$/node_modules/typescript/lib" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/interfaces" />
+      <recent name="$PROJECT_DIR$/src" />
+    </key>
+  </component>
+  <component name="ServiceViewManager">
+    <option name="viewStates">
+      <list>
+        <serviceView>
+          <treeState>
+            <expand />
+            <select />
+          </treeState>
+        </serviceView>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="d16cc7c8-25bd-4710-b367-116d21402362" name="Default Changelist" comment="" />
+      <created>1578893307263</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1578893307263</updated>
+      <workItem from="1578893309256" duration="3612000" />
+      <workItem from="1578907674110" duration="996000" />
+      <workItem from="1578908839923" duration="106342000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="320" y="80" key="#JavaScript" timestamp="1578906449674">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="320" y="80" key="#JavaScript/0.0.1440.900@0.0.1440.900" timestamp="1578906449674" />
+    <state x="320" y="115" key="#TypeScript" timestamp="1579264116142">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="320" y="115" key="#TypeScript/0.0.1440.900@0.0.1440.900" timestamp="1579264116142" />
+    <state x="184" y="112" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1578905492122">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="184" y="112" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1440.900@0.0.1440.900" timestamp="1578905492122" />
+    <state x="421" y="250" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1578906674736">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="421" y="250" key="#com.intellij.fileTypes.FileTypeChooser/0.0.1440.900@0.0.1440.900" timestamp="1578906674736" />
+    <state x="533" y="173" key="#com.intellij.ide.util.MemberChooser" timestamp="1579175291339">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="533" y="173" key="#com.intellij.ide.util.MemberChooser/0.0.1440.900@0.0.1440.900" timestamp="1579175291339" />
+    <state x="406" y="51" key="#com.intellij.openapi.keymap.impl.ui.EditKeymapsDialog" timestamp="1578907920396">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="406" y="51" key="#com.intellij.openapi.keymap.impl.ui.EditKeymapsDialog/0.0.1440.900@0.0.1440.900" timestamp="1578907920396" />
+    <state x="229" y="89" key="SettingsEditor" timestamp="1579145117226">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="229" y="89" key="SettingsEditor/0.0.1440.900@0.0.1440.900" timestamp="1579145117226" />
+    <state x="385" y="196" width="670" height="676" key="search.everywhere.popup" timestamp="1579176705947">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="385" y="196" width="670" height="676" key="search.everywhere.popup/0.0.1440.900@0.0.1440.900" timestamp="1579176705947" />
+  </component>
+</project>

@@ -1,5 +1,4 @@
 import cors from 'cors';
-import csrf from 'csurf';
 import helmet from 'helmet';
 import configs from '../configs';
 import cookieParser from 'cookie-parser';
@@ -20,14 +19,13 @@ const appInit = async (app: Application): Promise<void> => {
   app.use(cookieParser());
   app.use(helmet());
 
-  // Make sure csrf/csurf is configured just before registering the routes
-  app.use(csrf({ cookie: true }));
   app.use(configs.api.prefix, mainRouter);
 
   // The error handler must be before any other error middleware and after all controllers
   app.use(Sentry.Handlers.errorHandler());
 
   app.use('*', (req: Request, res: Response) => {
+    console.log(req.baseUrl)
     res.status(404).json({ 
       success: false,
       error: 'Route not found' 

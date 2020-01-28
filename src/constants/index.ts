@@ -1,10 +1,12 @@
 export default {
-  status: {
+  httpStatus: {
     OKAY: 200,
+    BAD_REQUEST: 400,
     CREATED: 201,
     CONFLICT: 409,
     NOT_FOUND: 404,
-    BAD_REQUEST: 400,
-    UNAUTHORIZED: 401
+    NOT_MODIFIED: 304,
+    UNAUTHORIZED: 401,
+    SERVER_ERROR: 500,
   }
 }
