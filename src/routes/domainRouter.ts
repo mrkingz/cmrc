@@ -1,12 +1,16 @@
 import { Router } from 'express';
 import domainController from '../controllers/DomainController';
 import userController from '../controllers/UserController'
+<<<<<<< HEAD
 import researchController from '../controllers/ResearchCategoryController';
+=======
+>>>>>>> 9d4372f... feat(researchCategories): research category CRUD
 import researchCategoryRouter from "./researchCategoryRouter";
 
 const domainRouter: Router = Router();
 
 const domainId: string = 'domainId';
+<<<<<<< HEAD
 const researchCategoryId: string = 'researchCategoryId'
 
 researchCategoryRouter.post('/:researchCategoryId/domains',
@@ -14,6 +18,10 @@ researchCategoryRouter.post('/:researchCategoryId/domains',
   userController.authorizeUser(),
   domainController.validateUuid(researchCategoryId),
   researchController.checkIfExist(researchCategoryId),
+=======
+
+researchCategoryRouter.post('/:researchCategoryId/domains',
+>>>>>>> 9d4372f... feat(researchCategories): research category CRUD
   domainController.validateInputs(),
   domainController.create());
 

@@ -11,7 +11,7 @@ class PaperTypeController extends CRUDController<IPaperType> {
     super(service);
   }
 
-  public create (): RequestHandler {
+  public create (alias?: string): RequestHandler {
     return this.tryCatch(async (req: Request): Promise<IResponseData<IPaperType>> => {
       const {
         params: { researchCategoryId },
@@ -22,7 +22,7 @@ class PaperTypeController extends CRUDController<IPaperType> {
 
       return this.getResponseData(
         newPaperType,
-        this.getMessage(`entity.created`),
+        this.getMessage(`entity.created`, alias || this.getServiceInstance().getRepository().getEntityName()),
         this.httpStatus.CREATED
       );
     })

@@ -107,7 +107,7 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * Paginate response data
    *
    * @param {IFindConditions} findConditions the find conditions
-   * @returns {Promise<any>}
+   * @returns {Promise<Pagination<T>>>}
    * @memberof AbstractRepository
    */
   public async find(findConditions: IFindConditions): Promise<Pagination<T>> {

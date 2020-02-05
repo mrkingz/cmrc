@@ -10,7 +10,7 @@ module.exports = {
     sourceType: 'module'
   },
   rules: {
-    'prettier/prettier': 0,
+    // 'prettier/prettier': 0,
     '@typescript-eslint/no-inferrable-types': 0,
     '@typescript-eslint/interface-name-prefix': 0,
     '@typescript-eslint/camelcase': 0,
