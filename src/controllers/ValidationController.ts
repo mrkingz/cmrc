@@ -1,13 +1,18 @@
-import { isEmpty, camelCase } from 'lodash';
+import { isEmpty } from 'lodash';
 import validate from "uuid-validate";
-import {Request, RequestHandler, NextFunction, Response} from 'express';
+import { FindOneOptions } from "typeorm";
+import { Request, RequestHandler, NextFunction, Response } from 'express';
 
 import Validator from "../validations/Validator";
 import AbstractController from "./AbstractController";
 import IValidatable from "../interfaces/IValidatable";
-import {FindOneOptions} from "typeorm";
+import AbstractService from "../services/AbstractService";
 
 export default abstract class ValidationController<T> extends AbstractController<T> {
+
+  protected constructor(service: AbstractService<T>) {
+    super(service);
+  }
 
   private validatable!: IValidatable
 
@@ -108,16 +113,23 @@ export default abstract class ValidationController<T> extends AbstractController
       if (validate(req.params[param]))
         return next;
 
-      throw this.error(`Parameter ${param} is not a valid uuid`, this.httpStatus.BAD_REQUEST);
+      throw this.error(this.getMessage('error.param', param), this.httpStatus.BAD_REQUEST);
     });
   }
 
-  public checkIfExist (param: string, target?: string): RequestHandler {
+
+  public checkIfExist (param: string, alias?: string): RequestHandler {
     return this.tryCatch(async (req: Request, res: Response, next: NextFunction): Promise<Function> => {
-      const found: T = await this.getServiceInstance().findOneOrFail(
-        { id: req.params[param] } as FindOneOptions<T>, target
-      );
-      req[camelCase(this.getServiceInstance().getRepository().getEntityName())] = found;
+      const data: T = await this.getServiceInstance().findOneOrFail({
+        id: req.params[param]
+      } as FindOneOptions<T>, alias);
+
+      if (req.method  !== 'GET') {
+        req.body = {
+          ...req.body, // Retain whatever that was appended body
+          [this.foundRecordKey()]: data
+        };
+      }
 
       return next;
     })

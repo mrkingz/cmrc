@@ -25,7 +25,6 @@ const appInit = async (app: Application): Promise<void> => {
   app.use(Sentry.Handlers.errorHandler());
 
   app.use('*', (req: Request, res: Response) => {
-    console.log(req.baseUrl)
     res.status(404).json({ 
       success: false,
       error: 'Route not found' 

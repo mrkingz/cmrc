@@ -14,7 +14,7 @@ import IFileUploadable from "../interfaces/IFileUploadable";
 import UserRepository from "../repositories/UserRepository";
 import { EmailTemplateOptions } from "../types/TemplateOptions";
 import Notification from "../vendors/notifications/Notification";
-import EmailChannel from "../vendors/notifications/EmailChannel";
+import { EmailChannel } from "../vendors/notifications/channels";
 import AbstractRepository from "../repositories/AbstractRepository";
 import { Pagination, PaginationParams } from "../types/Pangination";
 import { IEmailLangs, INotificationOptions } from "../types/Notification";
@@ -46,7 +46,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @memberOf UserService
    */
   public async accountVerification (token: string): Promise<IUser> {
-    const { id } = await this.validateToken(token, this.VERIFICATION);
+    const { id } = await this.validateTokenFromURL(token, this.VERIFICATION);
     const foundUser: IUser = await this.findOneOrFail({ id } as FindOneOptions<IUser>);
 
     return super.update(
@@ -60,7 +60,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
   }
 
   /**
-   * Authenticate user
+   * Authenticate user with credentials (username and password)
    *
    * @param {Credentials} credentials object containing the username and password
    * @returns {Promise<AuthResponse>} a promise that resolves with a message that indicate authentication was successful
@@ -99,7 +99,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    */
   public async checkAuthentication (token: string): Promise<IUser> {
     const { id } = this.decodeJWT(token, {}, this.AUTHENTICATION);
-    const foundUser: IUser = await this.findOneOrFail({ id } as FindOneOptions<IUser>);
+    const foundUser: IUser = await this.findOneOrFail({ where: { id } });
 
     return foundUser;
   }
@@ -111,7 +111,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @param {string} password new password
    * @param {string} oldPassword old/current password
    * @returns {boolean}
-   * @memberof UserController
+   * @memberof UserService
    */
   private confirmPassword (password: string, oldPassword: string, message: string): boolean {
     try {
@@ -131,9 +131,11 @@ export default class UserService extends AbstractService<IUser> implements IFile
   public async create (fields: IUser): Promise<IUser> {
     const { email } = fields;
 
-    const { password, resetStamp, ...user }: IUser = await super.create(
-      fields, () => this.checkDuplicate({ email }, this.getMessage(`error.email.conflict`))
-    );
+    const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      password, resetStamp, ...user
+    }: IUser = await super.create(fields,
+        () => this.checkDuplicate({ where: { email }}, this.getMessage(`error.email.conflict`)));
 
     this.sendEmail(user, this.VERIFICATION);
 
@@ -172,6 +174,29 @@ export default class UserService extends AbstractService<IUser> implements IFile
     }
   }
 
+  /**
+   * Gets all users
+   *
+   * @param options the find options
+   * @returns {Promise<Pagination<IUser>>} a promise that resolves with the list of users
+   * @memberOf UserService
+   */
+  public async find (options: IFindConditions): Promise<Pagination<IUser>> {
+    const { page, limit, sort, status } = options;
+    const conditions = status && typeof Boolean(status) === "boolean" ? { isVerified: status } : {}
+
+    return await this.getRepository().find({
+      where: conditions,
+      page, limit, sort
+    });
+  }
+
+  /**
+   * Gets an instance of FileStorage 
+   *
+   * @returns {FileStorage} an instance of file storage
+   * @memberof UserService
+   */
   public getFileStorageInstance(): FileStorage {
     return new FileStorage(`${configs.app.name}/photos`);
   }
@@ -231,27 +256,6 @@ export default class UserService extends AbstractService<IUser> implements IFile
     } as EmailTemplateOptions
   }
 
-  private async sendEmail (user: IUser, emailType: string, options: INotificationOptions = {}) {
-    const template: EmailTemplate =  new EmailTemplate(this.getEmailTemplateOptions(user, emailType, options));
-
-    return Notification.getChannel(template).send(user.email as string);
-  }
-
-  /**
-   * Searches users
-   *
-   * @param {SearchPayload} searchPayload payload of the fields to search and the query term
-   * @param {PaginationParams} paginationParams the pagination parameters if any
-   * @returns {Promise<Pagination<IUser>>}  a promise that resolves with the paginated response
-   * @memberOf UserService
-   */
-  public async search (searchPayload: SearchPayload, paginationParams: PaginationParams): Promise<Pagination<IUser>> {
-    return await (this.getRepository() as UserRepository).getSearchClient().searchIndex(
-      searchPayload,
-      paginationParams
-    );
-  }
-
   /**
    * Creates and return an instance of AbstractRepository<IUser>
    *
@@ -270,44 +274,26 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {IUser} the user details
    * @memberof UserService
    */
-  public async getUser (userId: string, authUser: IUser): Promise<IUser> {
+  public async getProfile (userId: string, authUser: IUser): Promise<IUser> {
     let user: IUser;
     /*
      * If user is the authenticated user
      * then, id from params must match the id of the authenticated user
      */
-    if (authUser.id === userId) {
+    if (authUser.id === userId) 
       user = authUser;
-    }
     /*
      * If id from params does not match,
      * Check if user is admin, as only admin can view other user's profile
      * Otherwise, throw an unauthorized message
      */
-    else if (authUser.isAdmin) {
-      user = await this.findOneOrFail({ id: userId } as FindOneOptions<IUser>);
-    } else {
+    else if (authUser.isAdmin)
+      user = await this.findOneOrFail({ where: { id: userId }});
+    else 
       throw this.error(this.getMessage('error.unauthorized'), httpStatus.UNAUTHORIZED);
-    }
+  
 
     return user;
-  }
-
-  /**
-   * Gets all users
-   *
-   * @param options the find options
-   * @returns {Promise<Pagination<IUser>>} a promise that resolves with the list of users
-   * @memberOf UserService
-   */
-  public async getUsers (options: IFindConditions): Promise<Pagination<IUser>> {
-    const { page, limit, sort, status } = options;
-    const conditions = status && typeof Boolean(status) === "boolean" ? { isVerified: status } : {}
-
-    return await this.getRepository().find({
-      where: conditions,
-      page, limit, sort
-    });
   }
 
   /**
@@ -322,6 +308,27 @@ export default class UserService extends AbstractService<IUser> implements IFile
     await this.getFileUploaderInstance().deleteFile(user.email as string);
 
     return updatedUser;
+  }
+
+  /**
+   * Searches users
+   *
+   * @param {SearchPayload} searchPayload payload of the fields to search and the query term
+   * @param {PaginationParams} paginationParams the pagination parameters if any
+   * @returns {Promise<Pagination<IUser>>}  a promise that resolves with the paginated response
+   * @memberOf UserService
+   */
+  public async search (searchPayload: SearchPayload, paginationParams: PaginationParams): Promise<Pagination<IUser>> {
+    return await (this.getRepository() as UserRepository).getSearchClient().searchIndex(
+      searchPayload,
+      paginationParams
+    );
+  }
+
+  private async sendEmail (user: IUser, emailType: string, options: INotificationOptions = {}) {
+    const template: EmailTemplate =  new EmailTemplate(this.getEmailTemplateOptions(user, emailType, options));
+
+    return Notification.getChannel(template).send(user.email as string);
   }
 
   /**
@@ -362,14 +369,16 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<IUser>} a promise that resolves with the updated user
    * @memberOf UserService
    */
-  public async updatePassword (token: string, password: string): Promise<IUser> {
-    const { id, resetStamp } = await this.validateToken(token, this.PASSWORD);
+  public async updatePassword (token: string, newPassword: string): Promise<IUser> {
+    const { id, resetStamp } = await this.validateTokenFromURL(token, this.PASSWORD);
     const foundUser: IUser = await this.findOneOrFail({
-      where: { id }, select: ['id', 'password', 'resetStamp']
-    } as FindOneOptions<IUser>);
+      where: { id },
+      select: ['id', 'password', 'resetStamp']
+    });
 
-    const { password: pass, ...updatedUser } = await this.update(
-      foundUser, { password },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...updatedUser } = await this.update(
+      foundUser, { password: newPassword },
       /*
        * Callback to check if:
        * - link has already been used
@@ -379,11 +388,11 @@ export default class UserService extends AbstractService<IUser> implements IFile
         user.resetStamp = Number(user.resetStamp);
         let message!: string;
 
-        if (user.resetStamp === 0) {
+        if (user.resetStamp === 0) 
           message = this.getMessage(`error.${this.PASSWORD}.used`);
-        } else if (user.resetStamp !== resetStamp) {
+        else if (user.resetStamp !== resetStamp) 
           message = this.getMessage(`error.${this.PASSWORD}.invalid`);
-        } else if (this.confirmPassword(password, user.password as string,
+        else if (this.confirmPassword(newPassword, user.password as string,
           this.getMessage(`error.required`, this.PASSWORD))) {
             message = this.getMessage(`error.${this.PASSWORD}.same`);
         }
@@ -405,7 +414,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Decoded} the decoded token
    * @memberOf UserService
    */
-  private async validateToken (token: string, tokenType: string): Promise<Decoded> {
+  private async validateTokenFromURL (token: string, tokenType: string): Promise<Decoded> {
     const decoded = this.decodeJWT(token, {}, tokenType);
     if (Date.now() > (decoded.exp * 1000)) {
       throw this.error(

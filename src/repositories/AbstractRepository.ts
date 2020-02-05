@@ -1,15 +1,19 @@
 import isEmpty from 'lodash.isempty';
-import {DeepPartial, DeleteResult, FindManyOptions, FindOneOptions, ObjectID, Repository} from 'typeorm';
+import {
+  DeleteResult,
+  FindManyOptions,
+  FindOneOptions,
+  ObjectID,
+  QueryRunner,
+  Repository,
+  SelectQueryBuilder
+} from 'typeorm';
 
-import constants from '../constants';
 import configs from '../configs/index';
 import Utilities from '../utilities/Utilities';
 import { IPaginationData, Pagination, PaginationMeta } from '../types/Pangination';
-import {IFindConditions, Indexable} from '../types/Repository';
-import IValidatable from "../interfaces/IValidatable";
-
-const { httpStatus } = constants;
-
+import {IFindConditions } from '../types/Repository';
+import IValidatable from '../interfaces/IValidatable';
 
 /**
  * 
@@ -21,7 +25,6 @@ const { httpStatus } = constants;
  * @template T
  */
 export default abstract class AbstractRepository<T> extends Utilities implements IValidatable {
-
 
   private entityName: string;
   protected readonly fillables: Array<string> = [];
@@ -67,6 +70,21 @@ export default abstract class AbstractRepository<T> extends Utilities implements
   }
 
   /**
+   * @Override
+   */
+  public excludeFillables (fields: object): Array<string> {
+    const { email, password, ...details } = fields as unknown as { [key: string]: string};
+
+    const updates: { [key: string]: string} = {};
+    Object.keys(details).forEach(key => { updates[key] = details[key]; });
+    const keys = Object.keys(updates);
+
+    return this.getFillables().filter((field: string) => {
+      return !keys.includes(field as string)
+    });
+  }
+
+  /**
    * Filter out the mass assignable/fillables fields
    *
    * @private
@@ -85,6 +103,33 @@ export default abstract class AbstractRepository<T> extends Utilities implements
     return fillables;
   }
 
+  /**
+   * Paginate response data
+   *
+   * @param {IFindConditions} findConditions the find conditions
+   * @returns {Promise<any>}
+   * @memberof AbstractRepository
+   */
+  public async find(findConditions: IFindConditions): Promise<Pagination<T>> {
+    const { page, limit, sort, ...options } = findConditions;
+    const order = sort ? (sort as string).split(':') : [];
+
+    const {
+      skip, itemsPerPage, currentPage
+    } = await this.computePagination(Number(limit), Number(page));
+
+    const [data, total] = await this.getRepository().findAndCount({
+      ...options,
+      skip,
+      order: isEmpty(order) ? null : { [order[0]]: order[1].toUpperCase() },
+      take: itemsPerPage
+    } as  FindManyOptions);
+
+    return {
+      data, pagination: this.getPaginationMeta(total, itemsPerPage, currentPage)
+    }
+  }
+
   public getPaginationMeta (total: number, itemsPerPage: number, currentPage: number): PaginationMeta {
     return {
       currentPage,
@@ -101,8 +146,11 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * @returns {Promise<T>} the found entity of null
    * @memberof AbstractRepository
    */
-  public async findOne (options: FindOneOptions<T>): Promise<T> {
-    const { ...data } = await this.getRepository().findOne(options) as T;
+  public async findOne (options: FindOneOptions<T> | T): Promise<T> {
+    const { ...data } = await this.getRepository().findOne({
+      ...options,
+    }) as T;
+
     return data;
   }
 
@@ -142,44 +190,23 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * Gets an instance of the entity's repository interface
    * Subclass should override this method to return
    *
-   * @returns
+   * @returns { Repository<T>} an instance of Repository<T>
    * @memberof AbstractRepository
    */
   public abstract getRepository (): Repository<T>;
 
   /**
-   * Paginate response data
-   *
-   * @param {IFindConditions} findConditions the find conditions
-   * @returns {Promise<any>}
-   * @memberof AbstractRepository
+   * Gets an instance of QueryBuilder
+   * @param {string} alias entity alias
+   * @param {QueryRunner} queryRunner an instance of QueryRunner
    */
-  public async find(findConditions: IFindConditions): Promise<Pagination<T>> {
-    const { page, limit, sort, ...options } = findConditions;
-    const order = sort ? (sort as string).split(':') : [];
-
-    const { 
-      skip, 
-      itemsPerPage, 
-      currentPage 
-    } = await this.computePagination(Number(limit), Number(page));
-    
-    const [data, total] = await this.getRepository().findAndCount({
-      ...options,
-      skip,
-      order: isEmpty(order) ? null : { [order[0]]: order[1].toUpperCase() },
-      take: itemsPerPage
-    } as  FindManyOptions<T>);
-
-    return {
-      data,
-      pagination: this.getPaginationMeta(total, itemsPerPage, currentPage)
-    }
+  public queryBuilder (alias?: string, queryRunner?: QueryRunner): SelectQueryBuilder<T> {
+    return this.getRepository().createQueryBuilder(alias, queryRunner);
   }
 
   /**
    * Saves a new instance/row of the entity
-   * 
+   *
    * @param {T} fields the entity fields
    * @returns {Promise<T>}
    */
@@ -190,31 +217,6 @@ export default abstract class AbstractRepository<T> extends Utilities implements
     );
 
     return data;
-  }
-
-  /**
-   * Sets the name of the entity
-   *
-   * @param {string} entityName the name of a database entity/model
-   * @memberof AbstractRepository
-   */
-  public setEntityName (entityName: string): void {
-    this.entityName = entityName;
-  }
-
-  /**
-   * @Override
-   */
-  public excludeFillables (fields: object): Array<string> {
-     const { email, password, ...details } = fields as unknown as { [key: string]: string};
-
-     const updates: { [key: string]: string} = {};
-     Object.keys(details).forEach(key => { updates[key] = details[key]; });
-     const keys = Object.keys(updates);
-
-     return this.getFillables().filter((field: string) => {
-       return !keys.includes(field as string)
-     });
   }
 
   /**

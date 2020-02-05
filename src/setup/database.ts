@@ -1,5 +1,12 @@
-import { createConnection, Connection, getConnectionOptions } from 'typeorm';
+import camelCase from 'lodash.camelcase';
+import { createConnection, Connection, getConnectionOptions, DefaultNamingStrategy } from 'typeorm';
 
+class CustomNamingStrategy extends DefaultNamingStrategy {
+
+  public columnName(propertyName: string, customName: string, embeddedPrefixes: string[]): string {
+    return super.columnName(camelCase(propertyName), camelCase(customName), embeddedPrefixes);
+  }
+}
 
 /**
  * @description Connect database
@@ -9,9 +16,10 @@ import { createConnection, Connection, getConnectionOptions } from 'typeorm';
  */
 const dbConnection: Function = async (env: string): Promise<Connection> => {
 
-  return await createConnection(
-    await getConnectionOptions(env)
-  );
+  return await createConnection({
+    ...await getConnectionOptions(env),
+    namingStrategy: new CustomNamingStrategy()
+  });
 };
 
 export default dbConnection;

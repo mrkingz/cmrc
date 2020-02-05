@@ -53,7 +53,7 @@ package-lock.json
 # disable random .vscode dir
 .vscode
 
-# Ignore MacOS Desktop OrderType Store
+# Ignore MacOS Desktop ResearchCategoryRepository Store
 .DS_Store
 
 .txt

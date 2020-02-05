@@ -24,8 +24,4 @@ export default class CustomError extends Error {
     this.error =  error;
     this.status = status || 500;
   }
-
-  // public getMessage() {
-  //   return { [typeof this.error === 'string' ? 'error' : 'errors']: this.error };
-  // }
 }

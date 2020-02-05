@@ -1,9 +1,9 @@
 import sendGrid from '@sendgrid/mail';
 import MailGenerator, { ContentBody } from 'mailgen';
-import configs from '../../configs'
-import AbstractNotification from "./AbstractNotification";
-import Template from "./templates/Template";
-import EmailTemplate from "./templates/EmailTemplate";
+import configs from '../../../configs'
+import AbstractNotification from "../AbstractNotification";
+import Template from "../templates/Template";
+import EmailTemplate from "../templates/EmailTemplate";
 import { ClientResponse } from '@sendgrid/client/src/response';
 
 sendGrid.setApiKey(configs.app.sendGridKey as string);

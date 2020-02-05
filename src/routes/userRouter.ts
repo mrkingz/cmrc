@@ -1,32 +1,32 @@
 import express, { Router} from 'express';
 import userController from '../controllers/UserController';
 
-const userRoutes: Router = express.Router();
+const userRouter: Router = express.Router();
+const userId: string = 'userId';
 
-userRoutes.use(userController.authenticateUser());
+userRouter.use(userController.authenticateUser());
 
 /**
  * Route to update profile
  */
-userRoutes.put('/profile', userController.validateInputs(), userController.updateProfile());
+userRouter.put('/profile', userController.validateInputs(), userController.updateProfile());
 
 /**
  * Route to get all users
  */
-userRoutes.get('/', userController.authorizeUser(),
+userRouter.get('/', userController.authorizeUser(),
   userController.validatePaginationParameters(),
-  userController.getUsers());
+  userController.find());
 
 /**
  * Route to get a single user
  */
-userRoutes.param('userId', userController.validateUuid('userId'))
-  .get('/:userId', userController.getUser());
+userRouter.get('/:userId',  userController.validateUuid(userId), userController.findOne(userId));
 
 /**
  * Route to search for users by name
  */
-userRoutes.post('/search',
+userRouter.post('/search',
   userController.authorizeUser(),
   userController.validatePaginationParameters(),
   userController.searchUsers());
@@ -34,7 +34,7 @@ userRoutes.post('/search',
 /**
  * Routes to upload a profile photo
  */
-userRoutes.put('/uploadPhoto', 
+userRouter.put('/uploadPhoto',
   userController.uploadFileToStorage('image'),
   userController.updatePhotoURL()
 )
@@ -42,6 +42,6 @@ userRoutes.put('/uploadPhoto',
 /**
  * Routes to remove profile photo
  */
-userRoutes.delete('/removePhoto', userController.removePhoto())
+userRouter.delete('/removePhoto', userController.removePhoto())
 
-export default userRoutes;
+export default userRouter;

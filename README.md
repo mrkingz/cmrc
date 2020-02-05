@@ -1,7 +1,7 @@
 [![CircleCI](https://circleci.com/gh/mrkingz/cmrc.svg?style=svg)](https://circleci.com/gh/mrkingz/cmrc)
 [![Maintainability](https://api.codeclimate.com/v1/badges/0b3250ee633a008cdacc/maintainability)](https://codeclimate.com/github/mrkingz/cmrc/maintainability)
 
-# Communication and Media Research Center (CMRC)
+# Communication and Media ResearchCategoryRepository Center (CMRC)
 CMRC is a web application that provides an online platform for clients to contact professionals or experts for a research in the field of Communication, Media, Advertising, marketing, Public Relations and Humanities.
 
 ## Backend Technology Stack

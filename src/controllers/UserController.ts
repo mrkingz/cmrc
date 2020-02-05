@@ -3,15 +3,15 @@ import { isEmpty } from 'lodash';
 import {Request, RequestHandler, NextFunction, Response} from 'express';
 
 import { IUser } from '../types/User';
+import CRUDController from "./CRUDController";
 import UserService from "../services/UserService";
 import ResponseData from "src/types/ResponseData";
 import { Pagination } from "../types/Pangination";
 import IResponseData from 'src/types/ResponseData';
 import AbstractService from "../services/AbstractService";
 import UserRepository from '../repositories/UserRepository';
-import ValidationController from "./ValidationController";
 
-class UserController extends ValidationController<IUser> {
+class UserController extends CRUDController<IUser> {
 
   protected readonly VERIFICATION: string = 'verification';
   protected readonly PASSWORD: string = 'password';
@@ -103,10 +103,10 @@ class UserController extends ValidationController<IUser> {
    * @returns {RequestHandler}
    * @memberof UserController
    */
-  public getUser (): RequestHandler {
+  public findOne (param: string, alias?: string): RequestHandler {
     return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
-      const { params: { userId }} = req;
-      const user: IUser = await (this.getServiceInstance() as UserService).getUser(userId, this.getAuthUser());
+      const { params: { [param]: userId }} = req;
+      const user: IUser = await (this.getServiceInstance() as UserService).getProfile(userId, this.getAuthUser());
 
       return this.getResponseData(user, this.getMessage('entity.retrieved', 'Profile'));
     });
@@ -118,16 +118,17 @@ class UserController extends ValidationController<IUser> {
    * @returns {RequestHandler}
    * @memberof UserController
    */
-  public getUsers (): RequestHandler {
+  public find (alias?: string): RequestHandler {
     return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
       const { query: { page, limit, sort, status }} = req;
 
-      const users: Pagination<IUser> = await (this.getServiceInstance() as UserService).getUsers({
+      const users: Pagination<IUser> = await (this.getServiceInstance() as UserService).find({
         page, limit, sort, status
       });
 
       return this.getResponseData(users,
-        this.getMessage(isEmpty(users.data) ? `entity.emptyList` : `entity.retrieved`, `Users`)
+        this.getMessage(isEmpty(users.data) ? `entity.emptyList` : `entity.retrieved`,
+          alias || `${this.getServiceInstance().getRepository().getEntityName()}`)
       );
     });
   }
@@ -140,10 +141,10 @@ class UserController extends ValidationController<IUser> {
    */
   public searchUsers (): RequestHandler {
     return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
-      const { page, limit, sort } = req.query;
+      const { query: { page, limit, sort, name }} = req;
 
       const data: Pagination<IUser> = await (this.getServiceInstance() as UserService).search({
-        query: req.query.name,
+        query: name,
         fields: ['firstName', 'lastName']
       }, { page, limit, sort });
 
@@ -194,6 +195,7 @@ class UserController extends ValidationController<IUser> {
   public signUp (): RequestHandler {
     return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
       this.getServiceInstance().setBaseUrl(this.getBaseUrl(req));
+
       const user: IUser = await this.getServiceInstance().create(req.body);
 
       return this.getResponseData(
@@ -211,6 +213,7 @@ class UserController extends ValidationController<IUser> {
   public updatePassword (): RequestHandler {
     return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
       const { body: { password }, params: { token }} = req;
+
       await (this.getServiceInstance() as UserService).updatePassword(token, password);
 
       return this.getResponseData({}, this.getMessage('entity.updated', `Password`));
@@ -226,6 +229,7 @@ class UserController extends ValidationController<IUser> {
   public updateProfile (): RequestHandler {
     return this.tryCatch(async (req: Request): Promise<IResponseData<IUser>> => {
       const { body : { email, password, ...updates }} = req;
+
       const updated: IUser = await this.getServiceInstance().update(this.getAuthUser(), updates);
 
       return this.getResponseData(

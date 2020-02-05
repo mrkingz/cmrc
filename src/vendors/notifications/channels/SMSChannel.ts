@@ -1,5 +1,5 @@
-import Template from "./templates/Template";
-import AbstractNotification from "./AbstractNotification";
+import Template from "../templates/Template";
+import AbstractNotification from "../AbstractNotification";
 
 export default class SMSChannel extends AbstractNotification<string, any> {
 
