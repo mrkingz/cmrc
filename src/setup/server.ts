@@ -23,7 +23,6 @@ const app: Application = express();
           console.log(`Server running on PORT ${PORT} in ${app.get('env')} mode`);
       });
   } catch (error) {
-      console.log(error);
       throw error;
   }
 })();

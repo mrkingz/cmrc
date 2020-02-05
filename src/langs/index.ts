@@ -28,8 +28,11 @@ export default {
     empty: `:value cannot be empty`,
     verified: `Account has been verified and activated`,
     server: `Internal error occurred, please contact support!`,
-    conflict: ':value already exist',
+    conflict: `:value already exist`,
+    duplicate: `:value already exist, duplicate not allowed!`,
     unauthorized: `You do not have the privilege for this operation`,
+    relation: `:value has associated records, cannot be deleted`,
+    param: `Parameter :value is not a valid uuid`,
     password: {
       invalid: `Invalid password reset link`,
       expired: `Update password link has expired`,
@@ -76,6 +79,7 @@ export default {
     updated: `:value successfully updated`,
     deleted: `:value successfully deleted`,
     retrieved: `:value successfully retrieved`,
+    retrievedList: `:value successfully retrieved`,
     emptyList: `:value list is currently empty`,
     file: {
       removed: `:value successfully removed`,

@@ -1,5 +1,5 @@
-import EmailChannel from "./EmailChannel";
-import SMSChannel from "./SMSChannel";
+import EmailChannel from "./channels/EmailChannel";
+import SMSChannel from "./channels/SMSChannel";
 import Template from "./templates/Template";
 import EmailTemplate from "./templates/EmailTemplate";
 

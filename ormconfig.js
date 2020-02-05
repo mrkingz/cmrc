@@ -37,7 +37,6 @@ const connectionConfigs = {
   test: {
     type: 'postgres',
     name: 'test',
-    logging: true,
     synchronize: true,
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,

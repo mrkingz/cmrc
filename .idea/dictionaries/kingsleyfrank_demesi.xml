@@ -1,14 +1,23 @@
 <component name="ProjectDictionaryState">
   <dictionary name="kingsleyfrank-demesi">
     <words>
+      <w>absrtact</w>
       <w>bcrypt</w>
       <w>cloudinary</w>
+      <w>cmrc</w>
+      <w>educationals</w>
+      <w>empiricals</w>
       <w>fillable</w>
       <w>fillables</w>
+      <w>mediatrends</w>
+      <w>mediatypes</w>
       <w>memberof</w>
       <w>multer</w>
       <w>ordertype</w>
       <w>outro</w>
+      <w>papertypes</w>
+      <w>signin</w>
+      <w>signup</w>
       <w>uploadable</w>
       <w>userservice</w>
     </words>

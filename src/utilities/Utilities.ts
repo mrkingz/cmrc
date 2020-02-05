@@ -1,6 +1,7 @@
 import lang from '../langs';
 import CustomError from './CustomError';
 import isEmpty = require('lodash.isempty');
+import { startCase, camelCase, upperFirst } from 'lodash';
 export default class Utilities {
 
   protected lang: object = lang;
@@ -13,8 +14,12 @@ export default class Utilities {
    * @returns
    * @memberof Utilities
    */
-  protected upperFirst (text: string): string {
-    return `${text.charAt(0).toUpperCase()}${text.substr(1)}`;
+  protected upperFirst (str: string): string {
+    return upperFirst(str);
+  }
+
+  protected titleCase(str: string): string {
+    return startCase(camelCase(str));
   }
 
   /**
@@ -32,7 +37,7 @@ export default class Utilities {
     const objKey: string = keys[0]; // the first object key
     let value;
 
-    /**
+    /*
      * If the current value of objKey is an object,
      * shift the array of keys and call the function deep
      */
@@ -58,12 +63,11 @@ export default class Utilities {
    * @returns {string}
    * @memberof Utilities
    */
-  protected getLang (key: string, target: string = ''): string | object {
+  protected getLang (key: string, alias: string = ''): string | object {
     const lang = this.deep(key, this.lang as {});
-
     if (!isEmpty(lang)) {
-      return lang.constructor === String
-        ? (lang as string).replace(':value', target)
+      return typeof lang === 'string'
+        ? (lang as string).replace(':value', alias)
         : lang as object;
     }
 
@@ -75,12 +79,12 @@ export default class Utilities {
    *
    * @protected
    * @param {string} key
-   * @param {string} [target]
+   * @param {string} [alias]
    * @returns {string}
    * @memberof Utilities
    */
-  protected getMessage (key: string, target?: string): string {
-    return this.getLang(key, target) as string;
+  protected getMessage (key: string, alias?: string): string {
+    return this.getLang(key, alias) as string;
   }
 
   /**

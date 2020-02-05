@@ -1,15 +1,15 @@
+import { camelCase } from 'lodash';
 import isEmpty from 'lodash.isempty';
-import {NextFunction} from 'connect';
-import {Request, RequestHandler, Response} from 'express';
+import * as Sentry from '@sentry/node';
+import {Request, RequestHandler, Response, NextFunction} from 'express';
 
 import configs from '../configs';
 import constants from '../constants';
-import CustomError from '../utilities/CustomError';
 import Utilities from '../utilities/Utilities';
-import IResponseData from '../types/ResponseData';
-import AbstractService from "../services/AbstractService";
 import {Pagination} from "../types/Pangination";
-import * as Sentry from '@sentry/node';
+import IResponseData from '../types/ResponseData';
+import CustomError from '../utilities/CustomError';
+import AbstractService from "../services/AbstractService";
 
 const { httpStatus } = constants;
 
@@ -20,6 +20,7 @@ export default abstract class AbstractController<T>  extends Utilities {
   protected readonly httpStatus = httpStatus;
 
   protected readonly service: AbstractService<T>;
+
 
   protected constructor(service: AbstractService<T>) {
     super();
@@ -38,13 +39,11 @@ export default abstract class AbstractController<T>  extends Utilities {
    */
   protected errorResponse (res: Response, exception: CustomError) {
     this.setAuthUser({} as T);
-    const { error, status } = exception
-    if (!status)
-      Sentry.captureException(exception);
+    const { error, status } = exception;
 
     return res.status(status || this.httpStatus.SERVER_ERROR).json({
       success: false,
-      error: error || this.getMessage('error.server')
+      error
     });
   }
 
@@ -57,6 +56,10 @@ export default abstract class AbstractController<T>  extends Utilities {
    */
   protected getAuthUser (): T {
     return this.authUser;
+  }
+
+  protected foundRecordKey (): string {
+    return camelCase(`found${this.getServiceInstance().getRepository().getEntityName()}`);
   }
 
   /**
@@ -168,6 +171,10 @@ export default abstract class AbstractController<T>  extends Utilities {
           ? response()
           : this.httpResponse(res, response);
       } catch (error) {
+        if (!(error instanceof CustomError)) {
+            Sentry.captureException(error);
+            error = this.error(this.getMessage('error.server'));
+        }
         return this.errorResponse(res, error);
       }
     }
