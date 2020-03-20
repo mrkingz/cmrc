@@ -1,7 +1,6 @@
-import {TemplateOptions} from "../../../types/TemplateOptions";
+import { TemplateOptions } from '../../../types/TemplateOptions';
 
 export default class Template {
-
   private name!: string;
   private text!: string;
   private subject!: string;
@@ -16,27 +15,27 @@ export default class Template {
     }
   }
 
-  public setName (name: string): void {
+  public setName(name: string): void {
     this.name = name;
   }
 
-  public getName (): string {
+  public getName(): string {
     return this.name;
   }
 
-  public setText (text: string): void {
-    this.text = text
+  public setText(text: string): void {
+    this.text = text;
   }
 
-  public getText (): string {
+  public getText(): string {
     return this.text;
   }
 
-  public setSubject (subject: string): void {
+  public setSubject(subject: string): void {
     this.subject = subject;
   }
 
-  public getSubject (): string {
+  public getSubject(): string {
     return this.subject;
   }
 }

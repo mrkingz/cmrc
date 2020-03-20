@@ -3,7 +3,6 @@ import { IResearchCategory } from '../types/ResearchCategory';
 import { Repository, getRepository } from 'typeorm';
 
 export default class ResearchCategoryRepository extends AbstractRepository<IResearchCategory> {
-
   protected fillables: Array<string> = ['categoryName'];
 
   /**

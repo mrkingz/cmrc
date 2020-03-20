@@ -1,5 +1,4 @@
-import {Pagination, PaginationMeta} from "./Pangination";
-import {IUser} from "./User";
+import { Pagination, PaginationMeta } from './Pangination';
 
 export default interface IResponseData<T> {
   keep?: boolean;
@@ -7,6 +6,6 @@ export default interface IResponseData<T> {
   status?: number;
   success?: boolean;
   meta?: object;
-  pagination?: PaginationMeta
+  pagination?: PaginationMeta;
   data?: T | Pagination<T>;
 }

@@ -1,9 +1,8 @@
-
 export interface INotificationOptions {
   subject?: string;
   body?: object;
   resetStamp?: number;
-  id?: string
+  id?: string;
 }
 
 export interface IEmailLangs {

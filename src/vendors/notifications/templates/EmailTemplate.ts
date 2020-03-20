@@ -1,14 +1,13 @@
-import Template from "./Template";
-import {EmailTemplateOptions} from "../../../types/TemplateOptions";
+import Template from './Template';
+import { EmailTemplateOptions } from '../../../types/TemplateOptions';
 
-export default class EmailTemplate extends Template{
-
+export default class EmailTemplate extends Template {
   private link!: string;
   private intro!: string;
   private outro!: string;
-  private instructions!: string
+  private instructions!: string;
 
-  public constructor (templateOptions?: EmailTemplateOptions) {
+  public constructor(templateOptions?: EmailTemplateOptions) {
     super(templateOptions);
 
     if (templateOptions) {

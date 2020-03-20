@@ -8,9 +8,9 @@
   },
   "scripts": {
     "start": "ts-node dist/setup/server.js",
-    "start-dev": "NODE_ENV=development nodemon",
+    "start:dev": "NODE_ENV=development nodemon",
     "build": "rm -rf dist && tsc",
-    "build-dev": "npm run build && npm run start",
+    "build:dev": "npm run build && npm run start",
     "heroku-postbuild": "npm run build",
     "typeorm:cli": "ts-node ./node_modules/typeorm/cli --config ./ormconfig.js",
     "migrate": "npm run typeorm:cli -- migration:run",
@@ -21,7 +21,8 @@
     "db:refresh": "npm run db:drop && npm run db:sync",
     "seed:refresh": "npm run db:refresh && npm run seed",
     "test": "npm run build && cross-env NODE_ENV=test nyc -r -e .ts jasmine-ts --forcExit",
-    "ci:test": "npm run build && cross-env NODE_ENV=test jasmine-ts --forcExit"
+    "ci:test": "npm run build && cross-env NODE_ENV=test jasmine-ts --forcExit",
+    "lint:fix": "eslint '*/**/*.{js,ts}' --fix"
   },
   "repository": {
     "type": "git",
@@ -99,6 +100,9 @@
     "nodemon": "1.19.1",
     "nyc": "14.1.1",
     "prettier": "1.18.2",
+    "prettier-cli": "^0.1.0",
+    "prettier-eslint": "^9.0.1",
+    "prettier-eslint-cli": "^5.0.0",
     "source-map-support": "0.5.13"
   },
   "husky": {
@@ -109,7 +113,7 @@
   },
   "lint-staged": {
     "*.{js, ts}": [
-      "prettier --write",
+      "eslint --fix",
       "git add"
     ]
   },

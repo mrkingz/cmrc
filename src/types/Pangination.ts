@@ -1,4 +1,3 @@
-
 export interface IPaginationData {
   skip: number;
   currentPage: number;
@@ -11,7 +10,7 @@ export interface PaginationParams {
   sort?: string;
 }
 
-  export interface PaginationMeta {
+export interface PaginationMeta {
   currentPage: number;
   itemsPerPage: number;
   totalItems: number;

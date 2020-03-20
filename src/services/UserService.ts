@@ -7,7 +7,7 @@ import configs from '../configs';
 import constants from '../constants';
 import AbstractService from './AbstractService';
 import { IFindConditions } from '../types/Repository';
-import { SearchPayload } from '../types/SearchOptions';
+import { ISearchPayload } from '../types/SearchOptions';
 import FileStorage from '../vendors/upload/FileStorage';
 import FileUploader from '../vendors/upload/FileUploader';
 import IFileUploadable from '../interfaces/IFileUploadable';
@@ -133,6 +133,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
     const {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       password,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       resetStamp,
       ...user
     }: IUser = await super.create(fields, () =>
@@ -141,7 +142,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
 
     this.sendEmail(user, this.VERIFICATION);
 
-    await (this.getRepository() as UserRepository).getSearchClient().createIndex({
+    await (this.getRepository() as UserRepository).getSearchClient().createIndex(user.id as string, {
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -326,7 +327,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<Pagination<IUser>>}  a promise that resolves with the paginated response
    * @memberOf UserService
    */
-  public async search(searchPayload: SearchPayload, paginationParams: PaginationParams): Promise<Pagination<IUser>> {
+  public async search(searchPayload: ISearchPayload, paginationParams: PaginationParams): Promise<Pagination<IUser>> {
     return await (this.getRepository() as UserRepository)
       .getSearchClient()
       .searchIndex(searchPayload, paginationParams);

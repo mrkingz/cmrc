@@ -1,7 +1,4 @@
-import SMSChannel from "./SMSChannel";
-import EmailChannel from "./EmailChannel";
+import SMSChannel from './SMSChannel';
+import EmailChannel from './EmailChannel';
 
-export {
-  SMSChannel,
-  EmailChannel
-};
+export { SMSChannel, EmailChannel };

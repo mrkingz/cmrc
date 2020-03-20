@@ -6,7 +6,6 @@
  * @extends {Error}
  */
 export default class CustomError extends Error {
-
   public error: string | object;
   public status: number;
 
@@ -21,7 +20,7 @@ export default class CustomError extends Error {
     super();
     Object.setPrototypeOf(this, CustomError.prototype);
     //this.message = typeof error === 'string' ? error : super.message;
-    this.error =  error;
+    this.error = error;
     this.status = status || 500;
   }
 }

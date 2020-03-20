@@ -1,4 +1,3 @@
-
 export interface IUser {
   id?: string;
   firstName?: string;
@@ -14,13 +13,13 @@ export interface IUser {
   updatedAt?: Date;
   resetStamp?: number;
   token?: string;
-};
+}
 
 export interface Decoded {
-  id: string,
-  resetStamp: number,
-  isAdmin: boolean,
-  exp: number,
+  id: string;
+  resetStamp: number;
+  isAdmin: boolean;
+  exp: number;
 }
 
 export interface Credentials {
@@ -32,4 +31,3 @@ export interface AuthResponse {
   token: string | null;
   message: string;
 }
-

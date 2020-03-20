@@ -1,5 +1,3 @@
-import {FindConditions, Not} from "typeorm";
-
 export interface IFindConditions {
   select?: object;
   where?: object;
@@ -10,10 +8,10 @@ export interface IFindConditions {
 }
 
 export type Indexable = {
-  [key: string]: string | boolean | number | {[key: string]: string} | [];
-}
+  [key: string]: string | boolean | number | { [key: string]: string } | [];
+};
 
 export interface IDuplicateOptions<T> {
-  conditions: T,
+  conditions: T;
   not?: T;
 }

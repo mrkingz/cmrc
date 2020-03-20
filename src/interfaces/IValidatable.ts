@@ -1,7 +1,4 @@
-import {Partials} from "../types/Validations";
-
 export default interface IValidatable {
-
   /**
    * @description Builds an instance of the entity to validate with the fields
    *
