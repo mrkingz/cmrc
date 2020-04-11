@@ -1,9 +1,9 @@
 export interface IFindConditions {
   select?: object;
   where?: object;
-  limit?: string | number;
-  page: string | number;
-  sort?: string | number;
+  limit?: number;
+  page?: number;
+  sort?: string;
   status?: boolean;
 }
 

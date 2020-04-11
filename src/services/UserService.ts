@@ -1,25 +1,26 @@
-import bcrypt from 'bcryptjs';
-import { RequestHandler } from 'express';
-import { FindOneOptions } from 'typeorm';
-import jwt, { SignOptions, VerifyOptions } from 'jsonwebtoken';
+import bcrypt from "bcryptjs";
+import {RequestHandler} from "express";
+import { FindOneOptions } from "typeorm";
+import jwt, { SignOptions, VerifyOptions } from "jsonwebtoken";
 
-import configs from '../configs';
-import constants from '../constants';
-import AbstractService from './AbstractService';
-import { IFindConditions } from '../types/Repository';
-import { ISearchPayload } from '../types/SearchOptions';
-import FileStorage from '../vendors/upload/FileStorage';
-import FileUploader from '../vendors/upload/FileUploader';
-import IFileUploadable from '../interfaces/IFileUploadable';
-import UserRepository from '../repositories/UserRepository';
-import { EmailTemplateOptions } from '../types/TemplateOptions';
-import Notification from '../vendors/notifications/Notification';
-import { EmailChannel } from '../vendors/notifications/channels';
-import AbstractRepository from '../repositories/AbstractRepository';
-import { Pagination, PaginationParams } from '../types/Pangination';
-import { IEmailLangs, INotificationOptions } from '../types/Notification';
-import { AuthResponse, Credentials, Decoded, IUser } from '../types/User';
-import EmailTemplate from '../vendors/notifications/templates/EmailTemplate';
+import configs from "../configs";
+import constants from "../constants";
+import AbstractService from "./AbstractService";
+
+import { IFindConditions } from "../types/Repository";
+import FileStorage from "../vendors/upload/FileStorage";
+import { ISearchPayload } from "src/types/SearchOptions";
+import FileUploader from "../vendors/upload/FileUploader";
+import IFileUploadable from "../interfaces/IFileUploadable";
+import UserRepository from "../repositories/UserRepository";
+import { EmailTemplateOptions } from "../types/TemplateOptions";
+import Notification from "../vendors/notifications/Notification";
+import { EmailChannel } from "../vendors/notifications/channels";
+import AbstractRepository from "../repositories/AbstractRepository";
+import { Pagination, PaginationParams } from "../types/Pagination";
+import { IEmailLangs, INotificationOptions } from "../types/Notification";
+import { AuthResponse, Credentials, Decoded, IUser } from "../types/User";
+import EmailTemplate from "../vendors/notifications/templates/EmailTemplate";
 
 const { httpStatus } = constants;
 
@@ -131,9 +132,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
     const { email } = fields;
 
     const {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       password,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       resetStamp,
       ...user
     }: IUser = await super.create(fields, () =>
@@ -152,7 +151,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
   }
 
   /**
-   * Decodes a JSON webtoken
+   * Decodes a JSONWebtoken
    *
    * @private
    * @param {string} token
@@ -219,7 +218,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
   }
 
   /**
-   * Generates a JSON Webtoken
+   * Generates a JSONWebtoken
    *
    * @private
    * @param {object} payload the token payload
@@ -413,7 +412,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
   }
 
   /**
-   * Validates a JSON webtoken
+   * Validates a JSONWebtoken
    *
    * @private
    * @param {string} token the token to validate

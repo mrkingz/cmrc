@@ -6,9 +6,9 @@ import { MinLength, MaxLength, IsDefined, IsNotEmpty, IsEmail } from 'class-vali
 
 @Entity('testimonies')
 export default class Testimony extends AbstractEntity {
-  @MinLength(20, { message: `$property must be at least $constraint1 characters` })
-  @MaxLength(200, { message: `$property cannot be longer than $constraint1 characters` })
-  @IsDefined({ message: '$property is required' })
+  @MinLength(20, Testimony.getMessage('minLength'))
+  @MaxLength(200, Testimony.getMessage('maxLength'))
+  @IsDefined(Testimony.getMessage('required'))
   @Column({ type: 'varchar', length: 200 })
   testimony!: string;
 

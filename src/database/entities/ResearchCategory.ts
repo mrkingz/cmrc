@@ -8,11 +8,12 @@ import MediaTrend from './MediaTrend';
 import Media from './MediaType';
 import Domain from './Domain';
 
+
 @Entity('researchCategories')
 export default class ResearchCategory extends AbstractEntity {
-  @MinLength(5, { message: `$property must be at least $constraint1 characters` })
-  @MaxLength(50, { message: `$property cannot be longer than $constraint1 characters` })
-  @IsDefined({ message: '$property is required' })
+  @MinLength(5, ResearchCategory.getMessage('minLength'))
+  @MaxLength(50, ResearchCategory.getMessage('maxLength'))
+  @IsDefined(ResearchCategory.getMessage('required'))
   @Column({ type: 'varchar', unique: true, length: 50 })
   categoryName?: string;
 

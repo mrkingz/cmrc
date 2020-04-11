@@ -1,11 +1,21 @@
+import { isEmpty } from 'lodash';
 import { Client, ClientOptions, ApiResponse } from '@elastic/elasticsearch';
 
 import configs from '../../configs/index';
 import AbstractRepository from '../../repositories/AbstractRepository';
-import { Pagination, PaginationParams } from '../../types/Pangination';
-import { ISearchPayload, SearchHit } from '../../types/SearchOptions';
-import { isEmpty } from 'lodash';
+import {Pagination, PaginationParams} from '../../types/Pagination';
+import { ISearchPayload, SearchHit } from 'src/types/SearchOptions';
 
+const { elasticSearch: { elasticSearchNode, credentials } } = configs;
+
+/**
+ * Handles all elastic search query
+ *
+ * @export
+ * @class SearchClient
+ * @extends {Client}
+ * @template T
+ */
 export default class SearchClient<T> extends Client {
   /**
    * @description The name of the index
@@ -16,16 +26,6 @@ export default class SearchClient<T> extends Client {
    */
   private readonly indexName: string;
 
-  /**
-   * @description A singleton of SearchClient
-   *
-   * @private
-   * @static
-   * @type {Client}
-   * @memberof SearchClient
-   */
-  private static singleton: Client;
-
   private readonly repository: AbstractRepository<T>;
 
   /**
@@ -34,21 +34,17 @@ export default class SearchClient<T> extends Client {
    * @param {AbstractRepository<T>} repository the repository to search
    * @memberof ElasticSearch
    */
-  public constructor(repository: AbstractRepository<T>) {
-    super({
-      node: configs.database.elasticSearch.node,
+  public constructor (repository: AbstractRepository<T>) {
+    super ({
+      node: elasticSearchNode,
       auth: {
-        username: configs.database.elasticSearch.credentials.username,
-        password: configs.database.elasticSearch.credentials.password,
-      },
+        username: credentials.username,
+        password: credentials.password
+      }
     } as ClientOptions);
 
     this.repository = repository;
-    this.indexName = `${configs.app.name.toLowerCase()}_${this.getRepository()
-      .getEntityName()
-      .toLowerCase()}`;
-
-    return (!!SearchClient.singleton ? SearchClient.singleton : this) as SearchClient<T>;
+    this.indexName = `${configs.app.name.toLowerCase()}_${this.getRepository().getEntityName().toLowerCase()}`;
   }
 
   /**
@@ -80,6 +76,24 @@ export default class SearchClient<T> extends Client {
   }
 
   /**
+   * Gets the sorts 
+   *
+   * @protected
+   * @param {string} sort
+   * @returns {(Array<string> | Array<{[key: string]: { order: string }}>)}
+   * @memberof SearchClient
+   */
+  protected getSortQuery(sort: string): Array<string> | Array<{[key: string]: { order: string }}> {
+    const sortArray = sort ? sort.split(':') : [];
+
+    return isEmpty(sortArray) 
+      ? sortArray 
+      : [{ 
+          [`${sortArray[0]}.keyword`]: { order: `${sortArray[1]}` } 
+        }]
+  }
+
+  /**
    * @description Searches an index
    *
    * @param {object} queryBody
@@ -89,8 +103,6 @@ export default class SearchClient<T> extends Client {
    */
   public async searchIndex(searchPayload: ISearchPayload, paginationParams: PaginationParams): Promise<Pagination<T>> {
     const { limit, page, sort } = paginationParams;
-    const sortArray = sort ? sort.split(':') : [];
-
     const { skip, itemsPerPage, currentPage } = await this.getRepository().computePagination(
       Number(limit),
       Number(page),
@@ -107,7 +119,7 @@ export default class SearchClient<T> extends Client {
         },
         size: itemsPerPage,
         from: skip,
-        sort: isEmpty(sortArray) ? sortArray : [{ [`${sortArray[0]}.keyword`]: { order: `${sortArray[1]}` } }],
+        sort: this.getSortQuery(sort as string),
       },
     });
 

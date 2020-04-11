@@ -10,7 +10,7 @@ const app: Application = express();
   try {
     /**
      * Make sure app initialization comes first so sentry can log any error
-     * that may occure during database connection
+     * that may occur during database connection
      */
     await appInit(app);
 

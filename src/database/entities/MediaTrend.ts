@@ -5,9 +5,9 @@ import { IsDefined, MaxLength, MinLength } from 'class-validator';
 
 @Entity('mediaTrends')
 export default class MediaTrend extends AbstractEntity {
-  @MinLength(3, { message: `$property must be at least $constraint1 characters` })
-  @MaxLength(50, { message: `$property cannot be longer than $constraint1 characters` })
-  @IsDefined({ message: '$property is required' })
+  @MinLength(3, MediaTrend.getMessage('minLength'))
+  @MaxLength(50, MediaTrend.getMessage('maxLength'))
+  @IsDefined(MediaTrend.getMessage('required'))
   @Column({ type: 'varchar', unique: true, length: 50 })
   mediaTrend!: string;
 

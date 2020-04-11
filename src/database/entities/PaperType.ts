@@ -6,9 +6,9 @@ import AbstractEntity from './AbsrtactEntity';
 
 @Entity('paperTypes')
 export default class PaperType extends AbstractEntity {
-  @MinLength(5, { message: `$property must be at least $constraint1 characters` })
-  @MaxLength(50, { message: `$property cannot be longer than $constraint1 characters` })
-  @IsDefined({ message: '$property is required' })
+  @MinLength(5, PaperType.getMessage('minLength'))
+  @MaxLength(50, PaperType.getMessage('maxLength'))
+  @IsDefined(PaperType.getMessage('required'))
   @Column({ type: 'varchar', unique: true, length: 50 })
   paperType?: string;
 

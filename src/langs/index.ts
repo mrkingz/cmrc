@@ -61,6 +61,14 @@ export default {
       required: `No :value was uploaded`,
       invalid: `File format must be one of :value`,
     },
+
+    entity: {
+      empty: `$property cannot be empty`,
+      invalid: `$property is not valid`,
+      required: `$property is required`,
+      maxLength: `$property cannot be longer than $constraint1 characters`,
+      minLength: `$property must be at least $constraint1 characters`
+    }
   },
 
   authentication: {

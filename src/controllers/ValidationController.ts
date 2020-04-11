@@ -26,7 +26,9 @@ export default abstract class ValidationController<T> extends AbstractController
   }
 
   /**
-   * Gets a list of fields names to exclude from validation
+   * Gets a list of fields names to exclude from validation. This is 
+   * useful when performing partial updates on an instance.
+   * Note: All fields in the returned array will not be validated
    *
    * @param {Request} req
    * @returns {Array<string>} array of fields names to exclude from validation
@@ -53,18 +55,19 @@ export default abstract class ValidationController<T> extends AbstractController
    * @returns RequestHandler
    * @memberOf ValidationController
    */
-  public validateInputs(): RequestHandler {
-    return this.tryCatch(
-      async (req: Request, res: Response, next: NextFunction): Promise<Function> => {
-        if (req.method === 'PUT' && isEmpty(req.body)) throw this.error('', this.httpStatus.NOT_MODIFIED);
-        else {
-          this.validatable = this.getServiceInstance().getRepository();
+  public validateInputs (): RequestHandler {
+    return this.tryCatch(async (req: Request, res: Response, next: NextFunction): Promise<Function> => {
 
-          const { errors, hasError } = await this.getValidator().validateInputs<T>(
-            this.getServiceInstance()
-              .getRepository()
-              .build(req.body),
-            { skip: this.getExcludedFields(req) },
+      if (req.method === 'PUT' && isEmpty(req.body))
+        throw this.error('', this.httpStatus.NOT_MODIFIED);
+      else {
+        this.validatable = this.getServiceInstance().getRepository(); // Get the validatable repository instance
+
+        const {
+          errors, hasError
+        } = await this.getValidator().validateInputs<T>(
+            this.getServiceInstance().getRepository().build(req.body),
+           { skip: this.getExcludedFields(req) } // Don't validate array of fields returned here
           );
 
           if (hasError) throw this.error(errors, this.httpStatus.BAD_REQUEST);
@@ -81,17 +84,16 @@ export default abstract class ValidationController<T> extends AbstractController
    * @returns RequestHandler
    * @memberOf ValidationController
    */
-  public validatePaginationParameters(): RequestHandler {
-    return this.tryCatch(
-      async (req: Request, res: Response, next: NextFunction): Promise<Function> => {
-        const {
-          query: { sort, page, limit },
-        } = req;
-
-        //TODO: validate sort
+  public validatePaginationParameters (): RequestHandler {
+    return this.tryCatch(async (req: Request, res: Response, next: NextFunction): Promise<Function> => {
+      const { query: { sort, page, limit }} = req;
+      // TODO: validate sort query param
 
         if (page || limit) {
-          const { errors, hasError } = await this.getValidator().validatePagination(limit as number, page as number);
+          const { 
+            errors, 
+            hasError 
+          } = await this.getValidator().validatePagination(parseInt(limit as string), parseInt(page as string));
 
           if (hasError) throw this.error(errors, this.httpStatus.BAD_REQUEST);
         }
@@ -118,25 +120,28 @@ export default abstract class ValidationController<T> extends AbstractController
     );
   }
 
-  public checkIfExist(param: string, alias?: string): RequestHandler {
-    return this.tryCatch(
-      async (req: Request, res: Response, next: NextFunction): Promise<Function> => {
-        const data: T = await this.getServiceInstance().findOneOrFail(
-          {
-            id: req.params[param],
-          } as FindOneOptions<T>,
-          alias,
-        );
+  /**
+   * Checks if an instance of T exist in storage
+   *
+   * @param {string} param the parameter to search with
+   * @param {string} [alias] an alias for the instance if not found
+   * @returns {RequestHandler} a function that takes an async callback that handles the GET request
+   * @memberof ValidationController
+   */
+  public checkIfExist (param: string, alias?: string): RequestHandler {
+    return this.tryCatch(async (req: Request, res: Response, next: NextFunction): Promise<Function> => {
+      const data: T = await this.getServiceInstance().findOneOrFail({
+        id: req.params[param]
+      } as FindOneOptions<T>, alias);
 
-        if (req.method !== 'GET') {
-          req.body = {
-            ...req.body, // Retain whatever that was appended body
-            [this.foundRecordKey()]: data,
-          };
-        }
+      if (req.method  !== 'GET') {
+        req.body = {
+          ...req.body, // keep whatever that was appended to the request body
+          [this.foundRecordKey()]: data
+        };
+      }
 
-        return next;
-      },
-    );
+      return next;
+    });
   }
 }

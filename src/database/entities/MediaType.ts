@@ -6,9 +6,9 @@ import AbstractEntity from './AbsrtactEntity';
 
 @Entity('mediaTypes')
 export default class MediaType extends AbstractEntity {
-  @MinLength(3, { message: `$property must be at least $constraint1 characters` })
-  @MaxLength(50, { message: `$property cannot be longer than $constraint1 characters` })
-  @IsDefined({ message: '$property is required' })
+  @MinLength(3, MediaType.getMessage('minLength'))
+  @MaxLength(50, MediaType.getMessage('maxLength'))
+  @IsDefined(MediaType.getMessage('required'))
   @Column({ type: 'varchar', unique: true, length: 50 })
   mediaType!: string;
 

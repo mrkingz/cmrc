@@ -5,20 +5,22 @@ import { Request, RequestHandler, Response, NextFunction } from 'express';
 
 import configs from '../configs';
 import constants from '../constants';
+import IResponse from '../types/Response';
 import Utilities from '../utilities/Utilities';
-import { Pagination } from '../types/Pangination';
-import IResponseData from '../types/ResponseData';
+import { Pagination } from '../types/Pagination';
 import CustomError from '../utilities/CustomError';
 import AbstractService from '../services/AbstractService';
 
 const { httpStatus } = constants;
 
 export default abstract class AbstractController<T> extends Utilities {
+  
   protected baseUrl!: string;
   protected authUser!: T;
   protected readonly httpStatus = httpStatus;
 
   protected readonly service: AbstractService<T>;
+  protected data!: T | Pagination<T>;
 
   protected constructor(service: AbstractService<T>) {
     super();
@@ -29,10 +31,9 @@ export default abstract class AbstractController<T> extends Utilities {
    * Handles error response
    *
    * @protected
-   * @param {Request} req
-   * @param {Response} res
-   * @param {CustomError} error
-   * @returns
+   * @param {Response} res HTTP response object
+   * @param {CustomError} error the CustomError to return to 
+   * @returns the HTTP response
    * @memberof AbstractController<T>
    */
   protected errorResponse(res: Response, exception: CustomError) {
@@ -59,13 +60,13 @@ export default abstract class AbstractController<T> extends Utilities {
    * @param {object} data
    * @param {string} message
    * @param {number} the status code
-   * @returns IResponseData<T>
+   * @returns IResponse<T>
    * @memberof AbstractController<T>
    */
-  protected getResponseData(data: T | Pagination<T>, message?: string, status?: number): IResponseData<T> {
-    const { pagination, ...details } = data as Pagination<T>;
+  protected getResponse(message?: string, status?: number): IResponse<T> {
+    const { pagination, ...details } = this.data as Pagination<T>;
 
-    if (!isEmpty(data)) {
+    if (!isEmpty(this.data)) {
       const entity = pagination ? details.data : details;
       let response: { [key: string]: string | number | object } = {
         status: status || this.httpStatus.OKAY,
@@ -102,7 +103,7 @@ export default abstract class AbstractController<T> extends Utilities {
    * @returns void
    * @memberof AbstractController<T>
    */
-  protected httpResponse(res: Response, options: IResponseData<T>): Response {
+  protected httpResponse(res: Response, options: IResponse<T>): Response {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { keep, message, success, status, ...data } = options;
     const statusCode = status || this.httpStatus.OKAY;
@@ -113,18 +114,6 @@ export default abstract class AbstractController<T> extends Utilities {
       message,
       ...data,
     });
-  }
-
-  /**
-   * Sets the authenticated user
-   *
-   * @protected
-   * @param {T} user
-   * @returns void
-   * @memberof @memberof AbstractController<T>
-   */
-  protected setAuthUser(user: T): void {
-    this.authUser = user;
   }
 
   /**
@@ -156,6 +145,7 @@ export default abstract class AbstractController<T> extends Utilities {
 
         return typeof response === 'function' ? response() : this.httpResponse(res, response);
       } catch (error) {
+        // Log internal/uncaught errors to Sentry
         if (!(error instanceof CustomError)) {
           Sentry.captureException(error);
           error = this.error(this.getMessage('error.server'));

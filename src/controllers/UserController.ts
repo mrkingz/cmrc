@@ -2,13 +2,17 @@ import { isEmpty } from 'lodash';
 import { Request, RequestHandler, NextFunction, Response } from 'express';
 
 import { IUser } from '../types/User';
-import CRUDController from './CRUDController';
-import UserService from '../services/UserService';
-import ResponseData from 'src/types/ResponseData';
-import { Pagination } from '../types/Pangination';
-import IResponseData from 'src/types/ResponseData';
+import IResponse from 'src/types/Response';
+import CRUDController from "./CRUDController";
+import UserService from "../services/UserService";
 import AbstractService from '../services/AbstractService';
 
+/**
+ * Controller that handles all User http request and response
+ *
+ * @class UserController
+ * @extends {AbstractController<UserService>}
+ */
 class UserController extends CRUDController<IUser> {
   protected readonly VERIFICATION: string = 'verification';
   protected readonly PASSWORD: string = 'password';
@@ -16,8 +20,8 @@ class UserController extends CRUDController<IUser> {
 
   /**
    * Creates a singleton instance of UserController.
-   *
-   * @param {UserRepository} repository the repository service instane
+   * 
+   * @param {AbstractService<IPaperType>} service
    * @memberof UserController
    */
   public constructor(service: AbstractService<IUser>) {
@@ -32,10 +36,10 @@ class UserController extends CRUDController<IUser> {
    */
   public accountVerification(): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<ResponseData<IUser>> => {
-        const user = await (this.getServiceInstance() as UserService).accountVerification(req.params.token);
+      async (req: Request): Promise<IResponse<IUser>> => {
+        this.data = await (this.getServiceInstance() as UserService).accountVerification(req.params.token);
 
-        return this.getResponseData(user, this.getMessage('email.verified'));
+        return this.getResponse(this.getMessage('email.verified'));
       },
     );
   }
@@ -49,10 +53,9 @@ class UserController extends CRUDController<IUser> {
   public authenticateUser(): RequestHandler {
     return this.tryCatch(
       async (req: Request, res: Response, next: NextFunction): Promise<NextFunction> => {
-        const user: IUser = await (this.getServiceInstance() as UserService).checkAuthentication(
+        req['decoded'] = await (this.getServiceInstance() as UserService).checkAuthentication(
           this.extractToken(req),
         );
-        req['decoded'] = user;
 
         return next;
       },
@@ -110,13 +113,13 @@ class UserController extends CRUDController<IUser> {
    */
   public findOne(param: string): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<IResponseData<IUser>> => {
+      async (req: Request): Promise<IResponse<IUser>> => {
         const {
           params: { [param]: userId },
         } = req;
-        const user: IUser = await (this.getServiceInstance() as UserService).getProfile(userId, this.getAuthUser(req));
+        this.data = await (this.getServiceInstance() as UserService).getProfile(userId, this.getAuthUser(req));
 
-        return this.getResponseData(user, this.getMessage('entity.retrieved', 'Profile'));
+        return this.getResponse(this.getMessage('entity.retrieved', 'Profile'));
       },
     );
   }
@@ -129,26 +132,17 @@ class UserController extends CRUDController<IUser> {
    */
   public find(alias?: string): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<IResponseData<IUser>> => {
-        const {
-          query: { page, limit, sort, status },
-        } = req;
+      async (req: Request): Promise<IResponse<IUser>> => {
 
-        const users: Pagination<IUser> = await (this.getServiceInstance() as UserService).find({
-          page,
-          limit,
-          sort,
-          status,
+        this.data = await (this.getServiceInstance() as UserService).find({
+          ...this.getPaginationParams(req),
+          status: Boolean(req.query.status)
         });
 
-        return this.getResponseData(
-          users,
+        return this.getResponse(
           this.getMessage(
-            isEmpty(users.data) ? `entity.emptyList` : `entity.retrieved`,
-            alias ||
-              `${this.getServiceInstance()
-                .getRepository()
-                .getEntityName()}`,
+            isEmpty(this.data) ? `entity.emptyList` : `entity.retrieved`,
+            this.getEntityName()
           ),
         );
       },
@@ -163,20 +157,16 @@ class UserController extends CRUDController<IUser> {
    */
   public searchUsers(): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<IResponseData<IUser>> => {
-        const {
-          query: { page, limit, sort, name },
-        } = req;
-
-        const data: Pagination<IUser> = await (this.getServiceInstance() as UserService).search(
+      async (req: Request): Promise<IResponse<IUser>> => {
+        this.data= await (this.getServiceInstance() as UserService).search(
           {
-            query: name,
+            query: req.query.name as string,
             fields: ['firstName', 'lastName'],
           },
-          { page, limit, sort },
+          this.getPaginationParams(req)
         );
 
-        return this.getResponseData(data);
+        return this.getResponse();
       },
     );
   }
@@ -196,7 +186,7 @@ class UserController extends CRUDController<IUser> {
         } = req;
 
         await (this.getServiceInstance() as UserService).sendPasswordResetLink(email);
-        return this.getResponseData({}, this.getMessage(`email.${this.PASSWORD}.message`));
+        return this.getResponse(this.getMessage(`email.${this.PASSWORD}.message`));
       },
     );
   }
@@ -209,16 +199,15 @@ class UserController extends CRUDController<IUser> {
    */
   public signIn(): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<IResponseData<IUser>> => {
+      async (req: Request): Promise<IResponse<IUser>> => {
         const {
           body: { email, password },
         } = req;
 
         const { token, message } = await (this.getServiceInstance() as UserService).authentication({ email, password });
-
-        return isEmpty(token)
-          ? this.getResponseData({}, message, this.httpStatus.UNAUTHORIZED)
-          : this.getResponseData({ token: token as string }, message);
+        this.data = { token: token as string }
+        
+        return this.getResponse(message, token ? this.httpStatus.UNAUTHORIZED : this.httpStatus.OKAY)
       },
     );
   }
@@ -231,13 +220,12 @@ class UserController extends CRUDController<IUser> {
    */
   public signUp(): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<IResponseData<IUser>> => {
+      async (req: Request): Promise<IResponse<IUser>> => {
         this.getServiceInstance().setBaseUrl(this.getBaseUrl(req));
 
-        const user: IUser = await this.getServiceInstance().create(req.body);
+        this.data = await this.getServiceInstance().create(req.body);
 
-        return this.getResponseData(
-          user,
+        return this.getResponse(
           this.getMessage(`email.${this.VERIFICATION}.message`),
           this.httpStatus.CREATED,
         );
@@ -253,7 +241,7 @@ class UserController extends CRUDController<IUser> {
    */
   public updatePassword(): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<IResponseData<IUser>> => {
+      async (req: Request): Promise<IResponse<IUser>> => {
         const {
           body: { password },
           params: { token },
@@ -261,7 +249,7 @@ class UserController extends CRUDController<IUser> {
 
         await (this.getServiceInstance() as UserService).updatePassword(token, password);
 
-        return this.getResponseData({}, this.getMessage('entity.updated', `Password`));
+        return this.getResponse(this.getMessage('entity.updated', `Password`));
       },
     );
   }
@@ -274,16 +262,16 @@ class UserController extends CRUDController<IUser> {
    */
   public updateProfile(): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<IResponseData<IUser>> => {
+      async (req: Request): Promise<IResponse<IUser>> => {
         const {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           body: { email, password, ...updates },
         } = req;
 
         const updated: IUser = await this.getServiceInstance().update(this.getAuthUser(req), updates);
+        this.data = { ...this.getAuthUser(req), ...updated };
 
-        return this.getResponseData(
-          { ...this.getAuthUser(req), ...updated },
+        return this.getResponse(
           this.getMessage('entity.updated', 'Profile'),
         );
       },
@@ -298,10 +286,10 @@ class UserController extends CRUDController<IUser> {
    */
   public removePhoto(): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<IResponseData<IUser>> => {
-        const updatedUser: IUser = await (this.getServiceInstance() as UserService).removePhoto(this.getAuthUser(req));
+      async (req: Request): Promise<IResponse<IUser>> => {
+        this.data = await (this.getServiceInstance() as UserService).removePhoto(this.getAuthUser(req));
 
-        return this.getResponseData(updatedUser, this.getMessage('entity.file.removed', 'Profile photo'));
+        return this.getResponse(this.getMessage('entity.file.removed', 'Profile photo'));
       },
     );
   }
@@ -339,14 +327,14 @@ class UserController extends CRUDController<IUser> {
    */
   public updatePhotoURL(): RequestHandler {
     return this.tryCatch(
-      async (req: Request): Promise<IResponseData<IUser>> => {
+      async (req: Request): Promise<IResponse<IUser>> => {
         const updatedUser: IUser = await this.getServiceInstance().update(
           { id: this.getAuthUser(req).id },
           { photo: decodeURIComponent(req.file['secure_url']) },
         );
+        this.data = { ...this.getAuthUser(req), ...updatedUser };
 
-        return this.getResponseData(
-          { ...this.getAuthUser(req), ...updatedUser },
+        return this.getResponse(
           this.getMessage('entity.updated', 'Profile photo'),
         );
       },

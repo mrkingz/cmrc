@@ -28,8 +28,9 @@ researchCategoryRouter.param('researchCategoryId', researchCategoryController.va
 
 researchCategoryRouter.param(researchCategoryId, researchCategoryController.validateUuid(researchCategoryId))
   .route('/:researchCategoryId')
-  .get(researchCategoryController.findOne('researchCategoryId'))
-  .all(userController.authenticateUser(),
+  .get(researchCategoryController.findOne(researchCategoryId, 'Research category'))
+  .all(
+    userController.authenticateUser(),
     userController.authorizeUser(),
     researchCategoryController.checkIfExist(researchCategoryId))
   .put(researchCategoryController.validateInputs(), researchCategoryController.update())

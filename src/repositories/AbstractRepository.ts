@@ -11,8 +11,8 @@ import {
 
 import configs from '../configs/index';
 import Utilities from '../utilities/Utilities';
-import { IPaginationData, Pagination, PaginationMeta } from '../types/Pangination';
-import { IFindConditions } from '../types/Repository';
+import { IPaginationData, Pagination, PaginationMeta } from '../types/Pagination';
+import {IFindConditions } from '../types/Repository';
 import IValidatable from '../interfaces/IValidatable';
 
 /**
@@ -158,7 +158,7 @@ export default abstract class AbstractRepository<T> extends Utilities implements
   /**
    * Gets the name of the entity/model
    *
-   * @returns {string} the name of the enitity
+   * @returns {string} the name of the entity
    * @memberof AbstractRepository<T>
    */
   public getEntityName(): string {
@@ -177,7 +177,7 @@ export default abstract class AbstractRepository<T> extends Utilities implements
   }
 
   /**
-   * Gets the array of fields not to include in the HTTP Rosponse JSON
+   * Gets the array of fields not to include in the HTTP Response JSON
    *
    * @abstract
    * @returns {Array<string>}

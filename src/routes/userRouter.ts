@@ -1,7 +1,8 @@
-import express, { Router } from 'express';
+import { Router } from 'express';
+
 import userController from '../controllers/UserController';
 
-const userRouter: Router = express.Router();
+const userRouter: Router = Router();
 const userId: string = 'userId';
 
 userRouter.use(userController.authenticateUser());

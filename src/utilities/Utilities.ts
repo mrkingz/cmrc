@@ -22,7 +22,7 @@ export default class Utilities {
   }
 
   /**
-   * Gets properties or nexted poperties of an object by key or nexted keys
+   * Gets properties or nexted properties of an object by key or nexted keys
    *
    * @protected
    * @param {string} key the key or nexted keys
@@ -56,7 +56,7 @@ export default class Utilities {
    *
    * @protected
    * @param {string} key the error key
-   * @param {string} target the targetted language
+   * @param {string} target the targeted language
    * @returns {string}
    * @memberof Utilities
    */
@@ -78,7 +78,7 @@ export default class Utilities {
    * @returns {string}
    * @memberof Utilities
    */
-  protected getMessage(key: string, alias?: string): string {
+  public getMessage(key: string, alias?: string): string {
     return this.getLang(key, alias) as string;
   }
 
