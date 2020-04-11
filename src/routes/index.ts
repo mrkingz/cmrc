@@ -11,6 +11,7 @@ import paperTypeRouter from './paperTypeRouter';
 import mediaTrendRouter from './mediaTrendRouter';
 import mediaTypeRouter from './mediaTypeRouter';
 import domainRouter from './domainRouter';
+import testimonyRouter from './testimonyRouter';
 
 const mainRouter: Router = Router();
 
@@ -30,5 +31,6 @@ mainRouter.use('/papertypes', paperTypeRouter);
 mainRouter.use('/mediatrends', mediaTrendRouter);
 mainRouter.use('/mediatypes', mediaTypeRouter);
 mainRouter.use('/domains', domainRouter);
+mainRouter.use('/testimonies', testimonyRouter)
 
 export default mainRouter;

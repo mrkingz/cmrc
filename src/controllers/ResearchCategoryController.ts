@@ -1,23 +1,22 @@
-import { RequestHandler, Request } from "express";
+import { RequestHandler, Request } from 'express';
 
+import IResponse from '../types/Response';
 import CRUDController from "./CRUDController";
-import IResponseData from "src/types/ResponseData";
-import AbstractController from "./AbstractController";
 import AbstractService from "../services/AbstractService";
 import {IResearchCategory, ResearchType} from "../types/ResearchCategory";
 import ResearchCategoryService from "../services/ResearchCategoryService";
 
 /**
- * Controller that handles all http request and response for vendors
+ * Controller that handles all research category http request and response
  *
- * @class ResearchController
+ * @class ResearchCategoryController
  * @extends {AbstractController<ResearchCategoryService>}
  */
 class ResearchCategoryController extends CRUDController<IResearchCategory> {
    /**
-    *Creates an instance of ResearchCategoryController.
+    * Creates an instance of ResearchCategoryController.
     *
-    * @returns {RequestHandler}
+    * @param {AbstractService<IPaperType>} service
     * @memberof ResearchCategoryController
     */
    constructor(service: AbstractService<IResearchCategory>) {
@@ -31,16 +30,25 @@ class ResearchCategoryController extends CRUDController<IResearchCategory> {
    * @memberof ResearchCategoryController
    */
   public findOneWithRelations(id: string, researchType: ResearchType, alias?: string): RequestHandler {
-    return this.tryCatch(async (req: Request): Promise<IResponseData<IResearchCategory>> => {
-      const { params: { researchCategoryId }} = req;
+    return this.tryCatch(
+      async (req: Request): Promise<IResponse<IResearchCategory>> => {
+        const {
+          params: { researchCategoryId },
+        } = req;
 
-      const researchService: ResearchCategoryService = (this.getServiceInstance() as ResearchCategoryService);
-      const researchCategory: IResearchCategory = await researchService.findOneWithRelations(researchCategoryId, researchType);
+        this.data = await (this.getServiceInstance() as ResearchCategoryService).findOneWithRelations(
+          researchCategoryId,
+          researchType,
+        );
 
-      return this.getResponseData(researchCategory,
-        this.getMessage('entity.retrieved',
-          alias ||  this.getServiceInstance().getRepository().getEntityName()));
-    });
+        return this.getResponse(
+          this.getMessage(
+            'entity.retrieved',
+           this.getEntityName()
+          ),
+        );
+      },
+    );
   }
 }
 

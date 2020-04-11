@@ -1,15 +1,22 @@
-import {RequestHandler, Request} from "express";
+import { RequestHandler, Request } from 'express';
 
-import CRUDController from "./CRUDController";
-import {IDiscipline} from "../types/Discipline";
-import IResponseData from "../types/ResponseData";
-import AbstractService from "../services/AbstractService";
-import DisciplineService from "../services/DisciplineService";
+import IResponse from '../types/Response';
+import CRUDController from './CRUDController';
+import { IDiscipline } from '../types/Discipline';
+import AbstractService from '../services/AbstractService';
+import DisciplineService from '../services/DisciplineService';
 
+/**
+ * Controller that handles all discipline http request and response
+ *
+ * @class disciplineController
+ * @extends {AbstractController<DisciplineService>}
+ */
 class DisciplineController extends CRUDController<IDiscipline> {
-
   /**
-   *Creates an instance of ResearchController.
+   * Creates an instance of DisciplineController.
+   * 
+   * @param {AbstractService<IPaperType>} service
    * @memberof DisciplineController
    */
   public constructor(service: AbstractService<IDiscipline>) {
@@ -22,21 +29,25 @@ class DisciplineController extends CRUDController<IDiscipline> {
    * @returns {RequestHandler}
    * @memberOf DisciplineController
    */
-  public create (): RequestHandler {
-    return this.tryCatch(async (req: Request): Promise<IResponseData<IDiscipline>> => {
-      const {
-        params: { researchCategoryId },
-        body: { discipline }
-      } = req;
+  public create(): RequestHandler {
+    return this.tryCatch(
+      async (req: Request): Promise<IResponse<IDiscipline>> => {
+        const {
+          params: { researchCategoryId },
+          body: { discipline },
+        } = req;
 
-      const newDiscipline: IDiscipline= await this.getServiceInstance().create({ discipline, researchCategoryId });
+        this.data = await this.getServiceInstance().create({ discipline, researchCategoryId });
 
-      return this.getResponseData(
-        newDiscipline,
-        this.getMessage(`entity.created`, this.getServiceInstance().getRepository().getEntityName()),
-        this.httpStatus.CREATED
-      );
-    })
+        return this.getResponse(
+          this.getMessage(
+            `entity.created`,
+            this.getEntityName()
+          ),
+          this.httpStatus.CREATED,
+        );
+      },
+    );
   }
 }
 

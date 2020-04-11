@@ -1,8 +1,8 @@
-import Discipline from "../database/entities/Discipline";
-import PaperType from "../database/entities/PaperType";
+import Discipline from '../database/entities/Discipline';
+import PaperType from '../database/entities/PaperType';
 
 export interface IResearchCategory {
-  id?: string
+  id?: string;
   categoryName?: string;
   disciplines?: Array<Discipline>;
   paperType?: Array<PaperType>;
@@ -13,5 +13,5 @@ export interface IResearchCategory {
 export enum ResearchType {
   Empirical = 'empirical',
   Practical = 'practical',
-  Education = 'education'
+  Education = 'education',
 }

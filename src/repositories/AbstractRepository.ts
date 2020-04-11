@@ -6,17 +6,17 @@ import {
   ObjectID,
   QueryRunner,
   Repository,
-  SelectQueryBuilder
+  SelectQueryBuilder,
 } from 'typeorm';
 
 import configs from '../configs/index';
 import Utilities from '../utilities/Utilities';
-import { IPaginationData, Pagination, PaginationMeta } from '../types/Pangination';
+import { IPaginationData, Pagination, PaginationMeta } from '../types/Pagination';
 import {IFindConditions } from '../types/Repository';
 import IValidatable from '../interfaces/IValidatable';
 
 /**
- * 
+ *
  *
  * @export
  * @abstract
@@ -25,7 +25,6 @@ import IValidatable from '../interfaces/IValidatable';
  * @template T
  */
 export default abstract class AbstractRepository<T> extends Utilities implements IValidatable {
-
   private entityName: string;
   protected readonly fillables: Array<string> = [];
   protected readonly hidden: Array<string> = [];
@@ -42,7 +41,7 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * @returns {T}
    * @memberof AbstractRepository
    */
-  public build (fields?: T): T {
+  public build(fields?: T): T {
     return this.getRepository().create(fields as T);
   }
 
@@ -54,33 +53,36 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * @returns {Promise<number>}
    * @memberof AbstractRepository
    */
-  public async computePagination (limit: number, page: number): Promise<IPaginationData> {
+  public async computePagination(limit: number, page: number): Promise<IPaginationData> {
     const { minItemsPerPage } = configs.api.pagination;
 
     const itemsPerPage: number = limit || minItemsPerPage;
     return {
       itemsPerPage,
       currentPage: page || 1,
-      skip: itemsPerPage  * (( page || 1 ) - 1 )
+      skip: itemsPerPage * ((page || 1) - 1),
     };
   }
 
-  public async delete(criteria: ObjectID): Promise<DeleteResult>{
+  public async delete(criteria: ObjectID): Promise<DeleteResult> {
     return await this.getRepository().delete(criteria);
   }
 
   /**
    * @Override
    */
-  public excludeFillables (fields: object): Array<string> {
-    const { email, password, ...details } = fields as unknown as { [key: string]: string};
+  public excludeFillables(fields: { [key: string]: string }): Array<string> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { email, password, ...details } = fields;
 
-    const updates: { [key: string]: string} = {};
-    Object.keys(details).forEach(key => { updates[key] = details[key]; });
+    const updates: { [key: string]: string } = {};
+    Object.keys(details).forEach(key => {
+      updates[key] = details[key];
+    });
     const keys = Object.keys(updates);
 
     return this.getFillables().filter((field: string) => {
-      return !keys.includes(field as string)
+      return !keys.includes(field as string);
     });
   }
 
@@ -92,7 +94,7 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * @memberof AbstractRepository
    * @param {object} values
    */
-  private filter (values: T): T {
+  private filter(values: T): T {
     const fillables: T = this.getRepository().create();
     if (!isEmpty(this.getFillables())) {
       this.getFillables().forEach(value => {
@@ -107,36 +109,35 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * Paginate response data
    *
    * @param {IFindConditions} findConditions the find conditions
-   * @returns {Promise<any>}
+   * @returns {Promise<Pagination<T>>>}
    * @memberof AbstractRepository
    */
   public async find(findConditions: IFindConditions): Promise<Pagination<T>> {
     const { page, limit, sort, ...options } = findConditions;
     const order = sort ? (sort as string).split(':') : [];
 
-    const {
-      skip, itemsPerPage, currentPage
-    } = await this.computePagination(Number(limit), Number(page));
+    const { skip, itemsPerPage, currentPage } = await this.computePagination(Number(limit), Number(page));
 
     const [data, total] = await this.getRepository().findAndCount({
       ...options,
       skip,
       order: isEmpty(order) ? null : { [order[0]]: order[1].toUpperCase() },
-      take: itemsPerPage
-    } as  FindManyOptions);
+      take: itemsPerPage,
+    } as FindManyOptions);
 
     return {
-      data, pagination: this.getPaginationMeta(total, itemsPerPage, currentPage)
-    }
+      data,
+      pagination: this.getPaginationMeta(total, itemsPerPage, currentPage),
+    };
   }
 
-  public getPaginationMeta (total: number, itemsPerPage: number, currentPage: number): PaginationMeta {
+  public getPaginationMeta(total: number, itemsPerPage: number, currentPage: number): PaginationMeta {
     return {
       currentPage,
       itemsPerPage,
       totalItems: total,
-      totalPage: Math.ceil(total/itemsPerPage ),       
-    }
+      totalPage: Math.ceil(total / itemsPerPage),
+    };
   }
 
   /**
@@ -146,21 +147,21 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * @returns {Promise<T>} the found entity of null
    * @memberof AbstractRepository
    */
-  public async findOne (options: FindOneOptions<T> | T): Promise<T> {
-    const { ...data } = await this.getRepository().findOne({
+  public async findOne(options: FindOneOptions<T> | T): Promise<T> {
+    const { ...data } = (await this.getRepository().findOne({
       ...options,
-    }) as T;
+    })) as T;
 
     return data;
   }
 
   /**
    * Gets the name of the entity/model
-   * 
-   * @returns {string} the name of the enitity
+   *
+   * @returns {string} the name of the entity
    * @memberof AbstractRepository<T>
    */
-  public getEntityName (): string {
+  public getEntityName(): string {
     return this.entityName;
   }
 
@@ -171,18 +172,18 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * @returns {Array<string>}
    * @memberof AbstractRepository
    */
-  public getFillables (): Array<string> {
+  public getFillables(): Array<string> {
     return this.fillables;
   }
 
   /**
-   * Gets the array of fields not to include in the HTTP Rosponse JSON
+   * Gets the array of fields not to include in the HTTP Response JSON
    *
    * @abstract
    * @returns {Array<string>}
    * @memberof AbstractRepository
    */
-  public getHiddenFields (): Array<string> {
+  public getHiddenFields(): Array<string> {
     return this.hidden;
   }
 
@@ -193,14 +194,14 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * @returns { Repository<T>} an instance of Repository<T>
    * @memberof AbstractRepository
    */
-  public abstract getRepository (): Repository<T>;
+  public abstract getRepository(): Repository<T>;
 
   /**
    * Gets an instance of QueryBuilder
    * @param {string} alias entity alias
    * @param {QueryRunner} queryRunner an instance of QueryRunner
    */
-  public queryBuilder (alias?: string, queryRunner?: QueryRunner): SelectQueryBuilder<T> {
+  public queryBuilder(alias?: string, queryRunner?: QueryRunner): SelectQueryBuilder<T> {
     return this.getRepository().createQueryBuilder(alias, queryRunner);
   }
 
@@ -210,10 +211,10 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * @param {T} fields the entity fields
    * @returns {Promise<T>}
    */
-  public async save (fields: T): Promise<T> {
+  public async save(fields: T): Promise<T> {
     const { ...data } = await this.getRepository().save(
       // Call create on the fields so Listeners/Subscribers can be triggered
-      this.getRepository().create(this.filter(fields))
+      this.getRepository().create(this.filter(fields)),
     );
 
     return data;
@@ -225,7 +226,7 @@ export default abstract class AbstractRepository<T> extends Utilities implements
    * @param entity
    * @returns {Promise<T>} a promise that resolves with the updated instance
    */
-  public async update (entity: T): Promise<T> {
+  public async update(entity: T): Promise<T> {
     // Build on the updated fields so Listeners/Subscribers can be triggered
     return this.getRepository().save(this.getRepository().create(entity));
   }

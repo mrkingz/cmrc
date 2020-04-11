@@ -20,9 +20,11 @@ researchCategoryRouter.post('/:researchCategoryId/domains',
 domainRouter.param(domainId, domainController.validateUuid(domainId))
   .route('/:domainId')
   .get(domainController.findOne(domainId))
-  .all(userController.authenticateUser(),
-    userController.authorizeUser(),
-    domainController.checkIfExist(domainId))
+  .all(
+    userController.authenticateUser(), 
+    userController.authorizeUser(), 
+    domainController.checkIfExist(domainId)
+  )
   .put(domainController.validateInputs(), domainController.update())
   .delete(domainController.delete());
 

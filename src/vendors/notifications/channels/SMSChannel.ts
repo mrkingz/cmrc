@@ -1,14 +1,14 @@
-import Template from "../templates/Template";
-import AbstractNotification from "../AbstractNotification";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import Template from '../templates/Template';
+import AbstractNotification from '../AbstractNotification';
 
 export default class SMSChannel extends AbstractNotification<string, any> {
-
   /**
    * Creates a singleton singleton of SMSChannel.
    *
    * @memberof EmailChannel
    */
-  public constructor (template?: Template) {
+  public constructor(template?: Template) {
     super(template as Template);
   }
 
@@ -21,5 +21,4 @@ export default class SMSChannel extends AbstractNotification<string, any> {
     // Todo: add implementation
     return;
   }
-
 }

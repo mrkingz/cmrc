@@ -1,10 +1,9 @@
-import {Repository, getRepository} from 'typeorm';
+import { Repository, getRepository } from 'typeorm';
 
 import AbstractRepository from './AbstractRepository';
-import {IPaperType} from '../types/PaperType';
+import { IPaperType } from '../types/PaperType';
 
 export default class PaperTypeRepository extends AbstractRepository<IPaperType> {
-
   protected fillables: Array<string> = ['paperType', 'researchCategoryId'];
 
   /**

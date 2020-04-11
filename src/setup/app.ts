@@ -1,14 +1,14 @@
 import cors from 'cors';
 import helmet from 'helmet';
-import configs from '../configs';
-import cookieParser from 'cookie-parser';
 import * as Sentry from '@sentry/node';
-import express, { Application } from 'express';
+import cookieParser from 'cookie-parser';
+import express, { Application, Request, Response } from 'express';
+
+import configs from '../configs';
 import mainRouter from '../routes/index';
-import { Request, Response } from 'express';
 
 const appInit = async (app: Application): Promise<void> => {
-  // Set up sentry for production error logging
+  // Set up sentry for error logging
   Sentry.init({ dsn: configs.app.sentry });
   app.use(Sentry.Handlers.requestHandler());
 
@@ -19,17 +19,18 @@ const appInit = async (app: Application): Promise<void> => {
   app.use(cookieParser());
   app.use(helmet());
 
+  // Register all routes/endpoints
   app.use(configs.api.prefix, mainRouter);
 
   // The error handler must be before any other error middleware and after all controllers
   app.use(Sentry.Handlers.errorHandler());
 
   app.use('*', (req: Request, res: Response) => {
-    res.status(404).json({ 
+    res.status(404).json({
       success: false,
-      error: 'Route not found' 
-    })
-  })
-}
+      error: 'Route not found',
+    });
+  });
+};
 
 export default appInit;

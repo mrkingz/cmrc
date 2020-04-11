@@ -1,21 +1,20 @@
 import sendGrid from '@sendgrid/mail';
 import MailGenerator, { ContentBody } from 'mailgen';
-import configs from '../../../configs'
-import AbstractNotification from "../AbstractNotification";
-import Template from "../templates/Template";
-import EmailTemplate from "../templates/EmailTemplate";
+import configs from '../../../configs';
+import AbstractNotification from '../AbstractNotification';
+import Template from '../templates/Template';
+import EmailTemplate from '../templates/EmailTemplate';
 import { ClientResponse } from '@sendgrid/client/src/response';
 
 sendGrid.setApiKey(configs.app.sendGridKey as string);
 
 export default class EmailChannel extends AbstractNotification<ContentBody, [ClientResponse, {}]> {
-
   /**
    * Creates an instance of EmailChannel.
    *
    * @memberof EmailChannel
    */
-  public constructor (template?: Template) {
+  public constructor(template?: Template) {
     super(template as Template);
   }
 
@@ -24,13 +23,13 @@ export default class EmailChannel extends AbstractNotification<ContentBody, [Cli
    */
   public send(to: string | Array<string>): Promise<[ClientResponse, {}]> {
     return sendGrid.send({
-      to: Array.isArray(to) ? to as Array<string> : [to as string],
+      to: Array.isArray(to) ? (to as Array<string>) : [to as string],
       subject: this.getTemplate().getSubject(),
       isMultiple: true,
       from: configs.app.fromEmail as string,
       html: this.getGenerator().generate({
-        body: this.getMessageBody()
-      })
+        body: this.getMessageBody(),
+      }),
     });
   }
 
@@ -48,11 +47,11 @@ export default class EmailChannel extends AbstractNotification<ContentBody, [Cli
         button: {
           color: '#22BC66',
           text: template.getText(),
-          link: template.getLink()
-        }
+          link: template.getLink(),
+        },
       },
-      outro: template.getOutro()
-    }
+      outro: template.getOutro(),
+    };
   }
 
   /**
@@ -62,15 +61,17 @@ export default class EmailChannel extends AbstractNotification<ContentBody, [Cli
    * @returns {MailGenerator}
    * @memberof EmailChannel
    */
-  private getGenerator (): MailGenerator {
-    const { app: { domain, logoUrl }} = configs;
+  private getGenerator(): MailGenerator {
+    const {
+      app: { domain, logoUrl },
+    } = configs;
     return new MailGenerator({
       theme: 'default',
       product: {
-          name: 'CMRC',
-          link: domain,
-          logo: logoUrl
-      }
-    })
+        name: 'CMRC',
+        link: domain,
+        logo: logoUrl,
+      },
+    });
   }
 }

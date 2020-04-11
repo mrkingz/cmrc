@@ -1,15 +1,14 @@
-import { Not} from "typeorm";
+import { Not } from 'typeorm';
 
-import constants from "../constants";
-import AbstractService from "./AbstractService";
-import AbstractRepository from "../repositories/AbstractRepository";
-import {IResearchCategory, ResearchType} from "../types/ResearchCategory";
-import ResearchCategoryRepository from "../repositories/ResearchCategoryRepository";
+import constants from '../constants';
+import AbstractService from './AbstractService';
+import AbstractRepository from '../repositories/AbstractRepository';
+import { IResearchCategory, ResearchType } from '../types/ResearchCategory';
+import ResearchCategoryRepository from '../repositories/ResearchCategoryRepository';
 
 const { httpStatus } = constants;
 
 export default class ResearchCategoryService extends AbstractService<IResearchCategory> {
-
   public constructor() {
     super();
   }
@@ -22,11 +21,12 @@ export default class ResearchCategoryService extends AbstractService<IResearchCa
    * @memberOf ResearchCategoryService
    */
   public async create(fields: IResearchCategory): Promise<IResearchCategory> {
-    return super.create(fields,
-      () => this.checkDuplicate(
-        { where: { categoryName: fields.categoryName }},
-         this.getMessage(`error.duplicate`, fields.categoryName))
-      );
+    return super.create(fields, () =>
+      this.checkDuplicate(
+        { where: { categoryName: fields.categoryName } },
+        this.getMessage(`error.duplicate`, fields.categoryName),
+      ),
+    );
   }
 
   /**
@@ -48,16 +48,15 @@ export default class ResearchCategoryService extends AbstractService<IResearchCa
    * @memberof ResearchCategoryService
    */
   public async findOneWithRelations(researchCategoryId: string, researchType: string): Promise<IResearchCategory> {
-
     const relations = {
       [ResearchType.Education]: ['disciplines', 'paperTypes'],
       [ResearchType.Empirical]: ['mediaTrends', 'mediaTypes'],
-      [ResearchType.Practical]: ['domains']
-    }
+      [ResearchType.Practical]: ['domains'],
+    };
 
     return this.findOneOrFail({
       where: { id: researchCategoryId },
-      relations: relations[researchType]
+      relations: relations[researchType],
     });
   }
 
@@ -72,12 +71,12 @@ export default class ResearchCategoryService extends AbstractService<IResearchCa
   public async update(researchCategory: IResearchCategory, fields: IResearchCategory): Promise<IResearchCategory> {
     const { categoryName: update } = fields;
 
-    return super.update(
-      researchCategory, fields,
-      async (data: IResearchCategory) => {
-        await this.checkDuplicate({ where: { categoryName: update, id: Not(data.id) }},
-            this.getMessage(`error.duplicate`, update))
-       });
+    return super.update(researchCategory, fields, async (data: IResearchCategory) => {
+      await this.checkDuplicate(
+        { where: { categoryName: update, id: Not(data.id) } },
+        this.getMessage(`error.duplicate`, update),
+      );
+    });
   }
 
   /**
@@ -86,13 +85,13 @@ export default class ResearchCategoryService extends AbstractService<IResearchCa
    * @param {IResearchCategory} research the research to delete
    * @returns Promise<void>
    */
-  public async delete (researchCategory: IResearchCategory): Promise<void> {
-
+  public async delete(researchCategory: IResearchCategory): Promise<void> {
     const { id, categoryName } = researchCategory;
-    const hasRelation: boolean = await this.hasRelations({ id },['disciplines', 'paperTypes']);
+    const hasRelation: boolean = await this.hasRelations({ id }, ['disciplines', 'paperTypes']);
 
-    if (hasRelation)
+    if (hasRelation) {
       throw this.error(this.getMessage('error.relation', categoryName), httpStatus.FORBIDDEN);
+    }
 
     await super.delete(researchCategory);
   }

@@ -1,4 +1,4 @@
-import configs from '../configs'
+import configs from '../configs';
 
 export default {
   email: {
@@ -8,7 +8,7 @@ export default {
       intro: `Welcome to ${configs.app.name}!`,
       text: `Confirm Your Account`,
       instructions: `To enjoy our amazing services, please click the button below to complete your registration.`,
-      outro: `Need help, or have questions? Just reply to this email, we would love to help.`
+      outro: `Need help, or have questions? Just reply to this email, we would love to help.`,
     },
 
     password: {
@@ -17,9 +17,9 @@ export default {
       intro: `You have received this email because a password reset request for your account was received.`,
       text: `Reset your password`,
       instructions: `To get started, please click here:`,
-      outro: `If you did not request a password reset, please ignore the message.`
+      outro: `If you did not request a password reset, please ignore the message.`,
     },
-    verified: `Email address successfully verified`
+    verified: `Email address successfully verified`,
   },
 
   error: {
@@ -37,32 +37,40 @@ export default {
       invalid: `Invalid password reset link`,
       expired: `Update password link has expired`,
       used: `Password reset link has already been used`,
-      same: `New password must be different from old password`
+      same: `New password must be different from old password`,
     },
     email: {
       conflict: `Email address has been used`,
-      invalid: `Email address has not been registered`
+      invalid: `Email address has not been registered`,
     },
     verification: {
       invalid: `Invalid verification link`,
-      expired: `Verification link has expired`
+      expired: `Verification link has expired`,
     },
     authentication: {
       invalid: 'Invalid authentication token',
-      notFound: `Authentication token not provided`
+      notFound: `Authentication token not provided`,
     },
     pagination: {
       page: `Page number cannot be less than 1`,
       invalid: `:value must be a positive integer`,
       minItems: `Paginated items per page cannot be less than :value`,
-      maxItems: `Paginated items per page cannot be greater than :value`
+      maxItems: `Paginated items per page cannot be greater than :value`,
     },
     file: {
       required: `No :value was uploaded`,
-      invalid: `File format must be one of :value`
+      invalid: `File format must be one of :value`,
+    },
+
+    entity: {
+      empty: `$property cannot be empty`,
+      invalid: `$property is not valid`,
+      required: `$property is required`,
+      maxLength: `$property cannot be longer than $constraint1 characters`,
+      minLength: `$property must be at least $constraint1 characters`
     }
   },
-  
+
   authentication: {
     invalid: 'Invalid email and password',
     required: 'Email and password are required',
@@ -71,7 +79,7 @@ export default {
     unverified: `Please confirm your email address to activate your account`,
     token: {
       notFound: `Authentication token not provided`,
-    }
+    },
   },
 
   entity: {
@@ -83,6 +91,6 @@ export default {
     emptyList: `:value list is currently empty`,
     file: {
       removed: `:value successfully removed`,
-    }
-  }
-}
+    },
+  },
+};

@@ -1,31 +1,47 @@
-import {Request, RequestHandler} from "express";
+import { Request, RequestHandler } from 'express';
 
-import {IPaperType} from "../types/PaperType";
-import CRUDController from "./CRUDController";
-import IResponseData from "../types/ResponseData";
-import AbstractService from "../services/AbstractService";
-import PaperTypeService from "../services/PaperTypeService";
+import IResponse from '../types/Response';
+import { IPaperType } from '../types/PaperType';
+import CRUDController from './CRUDController';
+import AbstractService from '../services/AbstractService';
+import PaperTypeService from '../services/PaperTypeService';
 
+/**
+ * Controller that handles all paper type http request and response
+ *
+ * @class PaperTypeController
+ * @extends {AbstractController<PaperTypeService>}
+ */
 class PaperTypeController extends CRUDController<IPaperType> {
+  /**
+   * Creates an instance of PaperTypeController.
+   * 
+   * @param {AbstractService<IPaperType>} service
+   * @memberof PaperTypeController
+   */
   public constructor(service: AbstractService<IPaperType>) {
     super(service);
   }
 
-  public create (): RequestHandler {
-    return this.tryCatch(async (req: Request): Promise<IResponseData<IPaperType>> => {
-      const {
-        params: { researchCategoryId },
-        body: { paperType }
-      } = req;
+  public create(alias?: string): RequestHandler {
+    return this.tryCatch(
+      async (req: Request): Promise<IResponse<IPaperType>> => {
+        const {
+          params: { researchCategoryId },
+          body: { paperType },
+        } = req;
 
-      const newPaperType: IPaperType = await this.getServiceInstance().create({ paperType, researchCategoryId });
+        this.data = await this.getServiceInstance().create({ paperType, researchCategoryId });
 
-      return this.getResponseData(
-        newPaperType,
-        this.getMessage(`entity.created`),
-        this.httpStatus.CREATED
-      );
-    })
+        return this.getResponse(
+          this.getMessage(
+            `entity.created`,
+            this.getEntityName()
+          ),
+          this.httpStatus.CREATED,
+        );
+      },
+    );
   }
 }
 

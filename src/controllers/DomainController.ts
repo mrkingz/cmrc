@@ -1,43 +1,53 @@
-import {RequestHandler, Request} from "express";
+import { RequestHandler, Request } from 'express';
 
+import IResponse from '../types/Response';
+import { IDomain } from '../types/Domain';
+import CRUDController from './CRUDController';
+import DomainService from '../services/DomainService';
+import AbstractService from '../services/AbstractService';
 
-import {IDomain} from "../types/Domain";
-import CRUDController from "./CRUDController";
-import IResponseData from "../types/ResponseData";
-import DomainService from "../services/DomainService";
-import AbstractService from "../services/AbstractService";
-
+/**
+ * Controller that handles all domain http request and response
+ *
+ * @class DomainController
+ * @extends {AbstractController<DomainService>}
+ */
 class DomainController extends CRUDController<IDomain> {
-
   /**
-   *Creates an instance of ResearchController.
-   * @memberof DisciplineController
+   * Creates an instance of DomainController.
+   * 
+   * @param {AbstractService<IPaperType>} service
+   * @memberof DomainController
    */
   public constructor(service: AbstractService<IDomain>) {
     super(service);
   }
 
   /**
-   * Create a new Discipline
+   * Create a new Domain
    *
    * @returns {RequestHandler}
-   * @memberOf DisciplineController
+   * @memberOf DomainController
    */
-  public create (): RequestHandler {
-    return this.tryCatch(async (req: Request): Promise<IResponseData<IDomain>> => {
-      const {
-        params: { researchCategoryId },
-        body: { domain }
-      } = req;
+  public create(): RequestHandler {
+    return this.tryCatch(
+      async (req: Request): Promise<IResponse<IDomain>> => {
+        const {
+          params: { researchCategoryId },
+          body: { domain },
+        } = req;
 
-      const newDomain: IDomain = await this.getServiceInstance().create({ domain, researchCategoryId });
+        this.data = await this.getServiceInstance().create({ domain, researchCategoryId });
 
-      return this.getResponseData(
-        newDomain,
-        this.getMessage(`entity.created`, this.getServiceInstance().getRepository().getEntityName()),
-        this.httpStatus.CREATED
-      );
-    })
+        return this.getResponse(
+          this.getMessage(
+            `entity.created`,
+            this.getEntityName(),
+          ),
+          this.httpStatus.CREATED,
+        );
+      },
+    );
   }
 }
 

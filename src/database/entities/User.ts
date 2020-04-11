@@ -1,39 +1,38 @@
-
 import bcrypt from 'bcryptjs';
-import { Entity, Column, BeforeInsert, BeforeUpdate, AfterLoad } from 'typeorm';
+import { Entity, Column, BeforeInsert, BeforeUpdate, OneToMany } from 'typeorm';
 import { IsEmail, MinLength, MaxLength, IsDefined, IsNotEmpty } from 'class-validator';
 
+import Testimony from './Testimony';
 import AbstractEntity from './AbsrtactEntity';
 
 @Entity('users')
 export default class User extends AbstractEntity {
-
-  @MinLength(2, { message: `First name must be at least $constraint1 characters` })
-  @MaxLength(50, { message: `First name cannot be longer than $constraint1 characters` })
-  @IsDefined({ message: '$property is required'})
-  @IsNotEmpty({ message: 'First name cannot be empty'})
+  @MinLength(2, User.getMessage('minLength'))
+  @MaxLength(50, User.getMessage('maxLength'))
+  @IsDefined(User.getMessage('required'))
+  @IsNotEmpty(User.getMessage('empty', 'First name'))
   @Column({ type: 'varchar', length: 50 })
   firstName!: string;
 
-  @IsDefined({ message: '$property is required'})
-  @IsNotEmpty({ message: 'Last name cannot be empty'})
-  @MinLength(2, { message: `Last name must be at least $constraint1 characters` })
-  @MaxLength(50, { message: `Last name cannot be longer than $constraint1 characters` })
+  @IsDefined(User.getMessage('required'))
+  @IsNotEmpty(User.getMessage('empty', 'Last name'))
+  @MinLength(2, User.getMessage('minLength'))
+  @MaxLength(50, User.getMessage('maxLength'))
   @Column({ type: 'varchar', length: 50 })
   lastName!: string;
 
-  @IsDefined({ message: '$property is required'})
+  @IsDefined(User.getMessage('required'))
   @Column({ type: 'varchar', unique: true })
-  @IsEmail({}, { message: `Please, enter a valid email address` })
+  @IsEmail({}, User.getMessage('invalid', 'Email address'))
   email!: string;
 
-  @IsDefined({ message: '$property is required'})
-  @MinLength(8, { message: `Password must be at least $constraint1 characters` })
-  @MaxLength(30, { message: `Password cannot be longer than $constraint1 characters` })
+  @IsDefined(User.getMessage('required'))
+  @MinLength(8, User.getMessage('minLength'))
+  @MaxLength(30, User.getMessage('maxLength'))
   @Column({ type: 'varchar', length: 60, select: false })
   password!: string;
 
-  @Column({ type: 'varchar', nullable: true,  unique: true, length: 100 })
+  @Column({ type: 'varchar', nullable: true, unique: true, length: 100 })
   photo!: string;
 
   @Column({ type: 'varchar', nullable: true, unique: true, length: 100 })
@@ -65,4 +64,7 @@ export default class User extends AbstractEntity {
       this.resetStamp = 0;
     }
   }
-};
+
+  @OneToMany(() => Testimony, testimonies => testimonies.user)
+  testimonies!: Array<Testimony>;
+}

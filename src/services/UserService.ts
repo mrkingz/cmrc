@@ -6,9 +6,10 @@ import jwt, { SignOptions, VerifyOptions } from "jsonwebtoken";
 import configs from "../configs";
 import constants from "../constants";
 import AbstractService from "./AbstractService";
+
 import { IFindConditions } from "../types/Repository";
-import { SearchPayload } from "../types/SearchOptions";
 import FileStorage from "../vendors/upload/FileStorage";
+import { ISearchPayload } from "src/types/SearchOptions";
 import FileUploader from "../vendors/upload/FileUploader";
 import IFileUploadable from "../interfaces/IFileUploadable";
 import UserRepository from "../repositories/UserRepository";
@@ -16,7 +17,7 @@ import { EmailTemplateOptions } from "../types/TemplateOptions";
 import Notification from "../vendors/notifications/Notification";
 import { EmailChannel } from "../vendors/notifications/channels";
 import AbstractRepository from "../repositories/AbstractRepository";
-import { Pagination, PaginationParams } from "../types/Pangination";
+import { Pagination, PaginationParams } from "../types/Pagination";
 import { IEmailLangs, INotificationOptions } from "../types/Notification";
 import { AuthResponse, Credentials, Decoded, IUser } from "../types/User";
 import EmailTemplate from "../vendors/notifications/templates/EmailTemplate";
@@ -24,7 +25,6 @@ import EmailTemplate from "../vendors/notifications/templates/EmailTemplate";
 const { httpStatus } = constants;
 
 export default class UserService extends AbstractService<IUser> implements IFileUploadable {
-
   private token?: string;
   protected readonly VERIFICATION: string = 'verification';
   protected readonly PASSWORD: string = 'password';
@@ -45,18 +45,16 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @return {Promise<IUser>} a promise that resolves with verified account details
    * @memberOf UserService
    */
-  public async accountVerification (token: string): Promise<IUser> {
+  public async accountVerification(token: string): Promise<IUser> {
     const { id } = await this.validateTokenFromURL(token, this.VERIFICATION);
     const foundUser: IUser = await this.findOneOrFail({ id } as FindOneOptions<IUser>);
 
-    return super.update(
-      foundUser, { isVerified: true },
-      (user: IUser) => {  // Callback function to check if email has been verified previously
-        if (user.isVerified) {
-          throw this.error(this.getMessage('error.verified'), httpStatus.UNAUTHORIZED);
-        }
+    return super.update(foundUser, { isVerified: true }, (user: IUser) => {
+      // Callback function to check if email has been verified previously
+      if (user.isVerified) {
+        throw this.error(this.getMessage('error.verified'), httpStatus.UNAUTHORIZED);
       }
-    );
+    });
   }
 
   /**
@@ -66,20 +64,22 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<AuthResponse>} a promise that resolves with a message that indicate authentication was successful
    * @memberOf UserService
    */
-  public async authentication (credentials: Credentials): Promise<AuthResponse> {
+  public async authentication(credentials: Credentials): Promise<AuthResponse> {
     const { email, password } = credentials;
     const langKey = this.AUTHENTICATION;
     let message: string = this.getMessage(`error.${langKey}.invalid`);
 
     const foundUser: IUser = await this.findOneOrFail({
-      where: { email }, select: ['id', 'password', 'isVerified']
+      where: { email },
+      select: ['id', 'password', 'isVerified'],
     } as FindOneOptions<IUser>);
 
-    if (foundUser.isVerified) { // check if user account has been verified
+    if (foundUser.isVerified) {
+      // check if user account has been verified
       if (this.confirmPassword(password, foundUser.password as string, message)) {
         return {
-          token: this.generateJWT({id: foundUser.id}),
-          message: this.getMessage(`${langKey}.success`)
+          token: this.generateJWT({ id: foundUser.id }),
+          message: this.getMessage(`${langKey}.success`),
         };
       }
       message = this.getMessage(`${langKey}.invalid`);
@@ -97,7 +97,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<IUser>} a promise that resolves with the authenticated user details
    * @memberOf UserService
    */
-  public async checkAuthentication (token: string): Promise<IUser> {
+  public async checkAuthentication(token: string): Promise<IUser> {
     const { id } = this.decodeJWT(token, {}, this.AUTHENTICATION);
     const foundUser: IUser = await this.findOneOrFail({ where: { id } });
 
@@ -113,7 +113,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {boolean}
    * @memberof UserService
    */
-  private confirmPassword (password: string, oldPassword: string, message: string): boolean {
+  private confirmPassword(password: string, oldPassword: string, message: string): boolean {
     try {
       return bcrypt.compareSync(password, oldPassword);
     } catch (error) {
@@ -128,26 +128,30 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<IUser>} a promise that resolves with  the user details
    * @memberof UserService
    */
-  public async create (fields: IUser): Promise<IUser> {
+  public async create(fields: IUser): Promise<IUser> {
     const { email } = fields;
 
     const {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      password, resetStamp, ...user
-    }: IUser = await super.create(fields,
-        () => this.checkDuplicate({ where: { email }}, this.getMessage(`error.email.conflict`)));
+      password,
+      resetStamp,
+      ...user
+    }: IUser = await super.create(fields, () =>
+      this.checkDuplicate({ where: { email } }, this.getMessage(`error.email.conflict`)),
+    );
 
     this.sendEmail(user, this.VERIFICATION);
 
-    await (this.getRepository() as UserRepository).getSearchClient().createIndex({
-      id: user.id, firstName: user.firstName, lastName: user.lastName
+    await (this.getRepository() as UserRepository).getSearchClient().createIndex(user.id as string, {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
     });
 
     return user;
   }
 
   /**
-   * Decodes a JSON webtoken
+   * Decodes a JSONWebtoken
    *
    * @private
    * @param {string} token
@@ -156,7 +160,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Decoded} the decoded token
    * @memberof UserService
    */
-  private decodeJWT (token: string, configOptions: VerifyOptions, tokenType: string): Decoded {
+  private decodeJWT(token: string, configOptions: VerifyOptions, tokenType: string): Decoded {
     try {
       const { secret, issuer } = configs.app.jwt;
 
@@ -181,18 +185,20 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<Pagination<IUser>>} a promise that resolves with the list of users
    * @memberOf UserService
    */
-  public async find (options: IFindConditions): Promise<Pagination<IUser>> {
+  public async find(options: IFindConditions): Promise<Pagination<IUser>> {
     const { page, limit, sort, status } = options;
-    const conditions = status && typeof Boolean(status) === "boolean" ? { isVerified: status } : {}
+    const conditions = status && typeof Boolean(status) === 'boolean' ? { isVerified: status } : {};
 
     return await this.getRepository().find({
       where: conditions,
-      page, limit, sort
+      page,
+      limit,
+      sort,
     });
   }
 
   /**
-   * Gets an instance of FileStorage 
+   * Gets an instance of FileStorage
    *
    * @returns {FileStorage} an instance of file storage
    * @memberof UserService
@@ -207,12 +213,12 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {FileUploader} an instance of FileUploader
    * @memberof UserService
    */
-  public getFileUploaderInstance (): FileUploader {
+  public getFileUploaderInstance(): FileUploader {
     return new FileUploader(this);
   }
 
   /**
-   * Generates a JSON Webtoken
+   * Generates a JSONWebtoken
    *
    * @private
    * @param {object} payload the token payload
@@ -220,7 +226,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {string}
    * @memberof UserService
    */
-  private generateJWT (payload: string | object, configOptions?: SignOptions): string {
+  private generateJWT(payload: string | object, configOptions?: SignOptions): string {
     const { secret, issuer } = configs.app.jwt;
     return jwt.sign(payload, secret as string, { issuer, ...configOptions });
   }
@@ -234,26 +240,33 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {string} the generated link
    * @memberof UserService
    */
-  private generateLink (payload: string | object, emailType: string): string {
+  private generateLink(payload: string | object, emailType: string): string {
     const expiresIn = emailType === this.PASSWORD ? { expiresIn: '1d' } : {};
     this.token = this.generateJWT(payload, {
       subject: emailType,
-      ...expiresIn
+      ...expiresIn,
     });
 
     return `${this.getBaseUrl()}/auth/${emailType}/${this.token}`;
   }
 
-  private getEmailTemplateOptions (user: IUser, emailType: string, options: INotificationOptions = {}): EmailTemplateOptions {
-    const {
-      intro, subject, outro, instructions, text
-    } = this.getLang(`email.${emailType}`) as IEmailLangs;
+  private getEmailTemplateOptions(
+    user: IUser,
+    emailType: string,
+    options: INotificationOptions = {},
+  ): EmailTemplateOptions {
+    const { intro, subject, outro, instructions, text } = this.getLang(`email.${emailType}`) as IEmailLangs;
     const { id, firstName: name } = user;
 
     return {
-      intro, outro, text, instructions, subject, name,
-      link: this.generateLink({ id, ...options }, emailType)
-    } as EmailTemplateOptions
+      intro,
+      outro,
+      text,
+      instructions,
+      subject,
+      name,
+      link: this.generateLink({ id, ...options }, emailType),
+    } as EmailTemplateOptions;
   }
 
   /**
@@ -274,24 +287,19 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {IUser} the user details
    * @memberof UserService
    */
-  public async getProfile (userId: string, authUser: IUser): Promise<IUser> {
+  public async getProfile(userId: string, authUser: IUser): Promise<IUser> {
     let user: IUser;
     /*
      * If user is the authenticated user
      * then, id from params must match the id of the authenticated user
      */
-    if (authUser.id === userId) 
-      user = authUser;
+    if (authUser.id === userId) user = authUser;
     /*
      * If id from params does not match,
      * Check if user is admin, as only admin can view other user's profile
      * Otherwise, throw an unauthorized message
-     */
-    else if (authUser.isAdmin)
-      user = await this.findOneOrFail({ where: { id: userId }});
-    else 
-      throw this.error(this.getMessage('error.unauthorized'), httpStatus.UNAUTHORIZED);
-  
+     */ else if (authUser.isAdmin) user = await this.findOneOrFail({ where: { id: userId } });
+    else throw this.error(this.getMessage('error.unauthorized'), httpStatus.UNAUTHORIZED);
 
     return user;
   }
@@ -303,7 +311,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<IUser>} a promise that resolves with the updated user
    * @memberOf UserService
    */
-  public async removePhoto (user: IUser): Promise<IUser> {
+  public async removePhoto(user: IUser): Promise<IUser> {
     const updatedUser = await this.update(user, { photo: null });
     await this.getFileUploaderInstance().deleteFile(user.email as string);
 
@@ -318,15 +326,14 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<Pagination<IUser>>}  a promise that resolves with the paginated response
    * @memberOf UserService
    */
-  public async search (searchPayload: SearchPayload, paginationParams: PaginationParams): Promise<Pagination<IUser>> {
-    return await (this.getRepository() as UserRepository).getSearchClient().searchIndex(
-      searchPayload,
-      paginationParams
-    );
+  public async search(searchPayload: ISearchPayload, paginationParams: PaginationParams): Promise<Pagination<IUser>> {
+    return await (this.getRepository() as UserRepository)
+      .getSearchClient()
+      .searchIndex(searchPayload, paginationParams);
   }
 
-  private async sendEmail (user: IUser, emailType: string, options: INotificationOptions = {}) {
-    const template: EmailTemplate =  new EmailTemplate(this.getEmailTemplateOptions(user, emailType, options));
+  private async sendEmail(user: IUser, emailType: string, options: INotificationOptions = {}) {
+    const template: EmailTemplate = new EmailTemplate(this.getEmailTemplateOptions(user, emailType, options));
 
     return Notification.getChannel(template).send(user.email as string);
   }
@@ -338,7 +345,7 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<void>} void
    * @memberOf UserService
    */
-  public async sendPasswordResetLink (email: string): Promise<void> {
+  public async sendPasswordResetLink(email: string): Promise<void> {
     const foundUser: IUser = await this.findOneOrFail({ email } as FindOneOptions<IUser>);
 
     const resetStamp: number = Date.now();
@@ -355,10 +362,10 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns RequestHandler
    * @memberOf UserService
    */
-  public uploadFile (user: IUser, fileType: string): RequestHandler {
-    return this.getFileUploaderInstance().uploadFile(
-      user.email as string, fileType
-    ).single('file');
+  public uploadFile(user: IUser, fileType: string): RequestHandler {
+    return this.getFileUploaderInstance()
+      .uploadFile(user.email as string, fileType)
+      .single('file');
   }
 
   /**
@@ -369,16 +376,17 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Promise<IUser>} a promise that resolves with the updated user
    * @memberOf UserService
    */
-  public async updatePassword (token: string, newPassword: string): Promise<IUser> {
+  public async updatePassword(token: string, newPassword: string): Promise<IUser> {
     const { id, resetStamp } = await this.validateTokenFromURL(token, this.PASSWORD);
     const foundUser: IUser = await this.findOneOrFail({
       where: { id },
-      select: ['id', 'password', 'resetStamp']
+      select: ['id', 'password', 'resetStamp'],
     });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...updatedUser } = await this.update(
-      foundUser, { password: newPassword },
+      foundUser,
+      { password: newPassword },
       /*
        * Callback to check if:
        * - link has already been used
@@ -388,24 +396,23 @@ export default class UserService extends AbstractService<IUser> implements IFile
         user.resetStamp = Number(user.resetStamp);
         let message!: string;
 
-        if (user.resetStamp === 0) 
-          message = this.getMessage(`error.${this.PASSWORD}.used`);
-        else if (user.resetStamp !== resetStamp) 
-          message = this.getMessage(`error.${this.PASSWORD}.invalid`);
-        else if (this.confirmPassword(newPassword, user.password as string,
-          this.getMessage(`error.required`, this.PASSWORD))) {
-            message = this.getMessage(`error.${this.PASSWORD}.same`);
+        if (user.resetStamp === 0) message = this.getMessage(`error.${this.PASSWORD}.used`);
+        else if (user.resetStamp !== resetStamp) message = this.getMessage(`error.${this.PASSWORD}.invalid`);
+        else if (
+          this.confirmPassword(newPassword, user.password as string, this.getMessage(`error.required`, this.PASSWORD))
+        ) {
+          message = this.getMessage(`error.${this.PASSWORD}.same`);
         }
 
-        if (message)
-          throw this.error(message, httpStatus.UNAUTHORIZED);
-      });
+        if (message) throw this.error(message, httpStatus.UNAUTHORIZED);
+      },
+    );
 
     return updatedUser;
   }
 
   /**
-   * Validates a JSON webtoken
+   * Validates a JSONWebtoken
    *
    * @private
    * @param {string} token the token to validate
@@ -414,12 +421,12 @@ export default class UserService extends AbstractService<IUser> implements IFile
    * @returns {Decoded} the decoded token
    * @memberOf UserService
    */
-  private async validateTokenFromURL (token: string, tokenType: string): Promise<Decoded> {
+  private async validateTokenFromURL(token: string, tokenType: string): Promise<Decoded> {
     const decoded = this.decodeJWT(token, {}, tokenType);
-    if (Date.now() > (decoded.exp * 1000)) {
+    if (Date.now() > decoded.exp * 1000) {
       throw this.error(
         this.getMessage(`error.${tokenType}.expired`, this.upperFirst(tokenType)),
-        httpStatus.UNAUTHORIZED
+        httpStatus.UNAUTHORIZED,
       );
     }
 

@@ -7,5 +7,5 @@ export default interface ISearchable<T> {
    * @returns {SearchClient<T>}
    * @memberof ISearch
    */
-  getSearchClient (): SearchClient<T>;
+  getSearchClient(): SearchClient<T>;
 }

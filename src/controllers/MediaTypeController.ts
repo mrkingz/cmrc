@@ -1,42 +1,56 @@
-import {RequestHandler, Request} from "express";
+import { RequestHandler, Request } from 'express';
 
-import CRUDController from "./CRUDController";
-import {IMediaType} from "../types/MediaType";
-import IResponseData from "../types/ResponseData";
-import AbstractService from "../services/AbstractService";
-import MediaTypeService from "../services/MediaTypeService";
+import IResponse from '../types/Response';
+import CRUDController from './CRUDController';
+import { IMediaType } from '../types/MediaType';
+import AbstractService from '../services/AbstractService';
+import MediaTypeService from '../services/MediaTypeService';
 
+/**
+ * Controller that handles all media type http request and response
+ *
+ * @class MediaTypeController
+ * @extends {AbstractController<MediaTypeService>}
+ */
 class MediaTypeController extends CRUDController<IMediaType> {
-
   /**
-   *Creates an instance of ResearchController.
-   * @memberof DisciplineController
+   * Creates an instance of MediaTypeController.
+   * 
+   * @param {AbstractService<IPaperType>} service
+   * @memberof MediaTypeController
    */
   public constructor(service: AbstractService<IMediaType>) {
     super(service);
   }
 
   /**
-   * Create a new Discipline
+   * Creates a new MediaType
    *
    * @returns {RequestHandler}
-   * @memberOf DisciplineController
+   * @memberOf MediaTypeController
    */
-  public create (): RequestHandler {
-    return this.tryCatch(async (req: Request): Promise<IResponseData<IMediaType>> => {
-      const {
-        params: { researchCategoryId },
-        body: { mediaType }
-      } = req;
+  public create(): RequestHandler {
+    return this.tryCatch(
+      async (req: Request): Promise<IResponse<IMediaType>> => {
+        const {
+          params: { researchCategoryId },
+          body: { mediaType },
+        } = req;
 
-      const newMediaType: IMediaType = await this.getServiceInstance().create({ mediaType, researchCategoryId });
+        this.data = await this.getServiceInstance().create({
+          mediaType,
+          researchCategoryId,
+        });
 
-      return this.getResponseData(
-        newMediaType,
-        this.getMessage(`entity.created`, this.getServiceInstance().getRepository().getEntityName()),
-        this.httpStatus.CREATED
-      );
-    })
+        return this.getResponse(
+          this.getMessage(
+            `entity.created`,
+            this.getEntityName()
+          ),
+          this.httpStatus.CREATED,
+        );
+      },
+    );
   }
 }
 

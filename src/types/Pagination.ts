@@ -6,8 +6,8 @@ export interface IPaginationData {
 }
 
 export interface PaginationParams {
-  page: string;
-  limit: string;
+  page: number;
+  limit: number;
   sort?: string;
 }
 

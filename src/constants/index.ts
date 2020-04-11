@@ -9,5 +9,5 @@ export default {
     NOT_MODIFIED: 304,
     UNAUTHORIZED: 401,
     SERVER_ERROR: 500,
-  }
-}
+  },
+};
